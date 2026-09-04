@@ -1,0 +1,14 @@
+:root {
+  --color-primary: #5F6367;
+  --color-accent:  #A8854A;
+  --color-bg:      #F2F2F2;
+  --color-surface: #FFFFFF;
+  --color-text:    #2A2D2F;
+  --color-success: #1B8A5A;
+  --color-warning: #C97A1A;
+  --color-danger:  #B6332A;
+  --font-sans: 'Montserrat', 'Open Sans', sans-serif;
+  --font-size-base: 14px;
+  --sidebar-width: 240px;
+  --radius: 6px;
+}
