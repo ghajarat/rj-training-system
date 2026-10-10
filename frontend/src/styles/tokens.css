@@ -1,14 +1,40 @@
+/* Design tokens — locked in Phase 0. Components use these variables only;
+   never hard-code a brand color in a component stylesheet. */
 :root {
-  --color-primary: #5F6367;
-  --color-accent:  #A8854A;
-  --color-bg:      #F2F2F2;
+  /* Brand */
+  --color-primary: #5F6367;   /* Flint Gray */
+  --color-accent:  #A8854A;   /* Prom Gold */
+  --color-bg:      #F2F2F2;   /* Light Gray */
   --color-surface: #FFFFFF;
-  --color-text:    #2A2D2F;
+  --color-text:    #2A2D2F;   /* Dark Slate */
+
+  /* Status */
   --color-success: #1B8A5A;
   --color-warning: #C97A1A;
   --color-danger:  #B6332A;
+
+  /* Derived neutrals (tints of the brand colors) */
+  --color-primary-hover: #4E5256;
+  --color-accent-soft:   #F4EEE4;
+  --color-danger-soft:   #FBEDEC;
+  --color-text-muted:    #6E7377;
+  --color-border:        #E1E2E3;
+  --color-border-strong: #C9CBCD;
+  --color-sidebar:       #5F6367;
+  --color-sidebar-active:#4E5256;
+
+  /* Type */
   --font-sans: 'Montserrat', 'Open Sans', sans-serif;
   --font-size-base: 14px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+  --font-size-lg: 16px;
+  --font-size-xl: 22px;
+
+  /* Layout */
   --sidebar-width: 240px;
+  --topbar-height: 60px;
   --radius: 6px;
+  --shadow-card: 0 1px 2px rgba(42, 45, 47, 0.06);
+  --focus-ring: 0 0 0 3px rgba(168, 133, 74, 0.35);
 }
