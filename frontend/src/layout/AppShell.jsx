@@ -5,12 +5,9 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import BrandMark from '../components/BrandMark';
 import Icon from '../components/Icon';
+import { initials } from '../utils/format';
 import { navFor, titleFor } from './navigation';
 import './AppShell.css';
-
-function initials(name = '') {
-  return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
-}
 
 export default function AppShell() {
   const { user, logout } = useAuth();

@@ -2,7 +2,7 @@
 // <Button variant="secondary" icon="arrowRight" iconPosition="end">Next</Button>
 // <Button loading>Signing in…</Button>
 //
-// variant: 'primary' (Flint Gray) | 'accent' (Prom Gold) | 'secondary' (outlined) | 'ghost'
+// variant: 'primary' (Flint Gray) | 'accent' (Prom Gold) | 'secondary' (outlined) | 'ghost' | 'danger'
 // size:    'md' | 'sm'
 import Icon from './Icon';
 import './Button.css';

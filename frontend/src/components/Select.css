@@ -1,0 +1,19 @@
+/* Native select with our own chevron (drawn with two gradients so no image
+   or hardcoded colour is needed). */
+.select {
+  appearance: none;
+  padding-right: 34px;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.select:disabled {
+  cursor: not-allowed;
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+}

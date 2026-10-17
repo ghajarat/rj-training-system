@@ -27,6 +27,8 @@
   --color-success-soft:  #E7F3EE;
   --color-warning-soft:  #FBF1E4;
   --color-neutral-soft:  #ECEDEE;
+  --color-primary-soft:  #E3E4E5;   /* Flint Gray tint (Trainer badge) */
+  --color-row-hover:     #FAFAFA;
   --color-placeholder:   #A2A6A9;
   --color-avatar-sidebar: var(--color-accent);
 

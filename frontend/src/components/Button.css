@@ -89,3 +89,12 @@
   .btn { transition: none; }
   .btn__spinner { animation-duration: 2s; }
 }
+
+/* Destructive actions such as Deactivate (FR19) */
+.btn--danger {
+  background: var(--color-danger);
+  color: var(--color-on-dark);
+}
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}

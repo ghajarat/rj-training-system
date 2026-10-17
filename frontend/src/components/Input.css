@@ -99,3 +99,9 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
+
+.field__input:disabled {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}

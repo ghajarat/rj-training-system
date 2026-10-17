@@ -29,8 +29,10 @@ export default function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from;
+  // Set by the set-password page after an invite or reset is completed.
+  const success = location.state?.success;
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -117,6 +119,13 @@ export default function SignIn() {
             <h2>Welcome back.</h2>
             <p>Sign in with your employee credentials to continue your training.</p>
           </div>
+
+          {success && !banner && (
+            <div className="signin__alert signin__alert--success" role="status">
+              <Icon name="check" size={16} />
+              <span>{success}</span>
+            </div>
+          )}
 
           {banner && (
             <div className="signin__alert" role="alert">

@@ -14,6 +14,8 @@ export const NAV_SECTIONS = [
       { label: 'Training Materials', path: '/materials',  icon: 'book',  roles: [TRAINEE, TRAINER] },
       { label: 'AI Assistant',       path: '/assistant',  icon: 'chat',  roles: [TRAINEE, TRAINER, ADMIN] },
       { label: 'Analytics & ROI',    path: '/analytics',  icon: 'chart', roles: [TRAINER, ADMIN] },
+      { label: 'SOP Library',        path: '/admin/sop-library',   icon: 'database', roles: [ADMIN] },
+      { label: 'System Health',      path: '/admin/system-health', icon: 'shield',   roles: [ADMIN] },
       { label: 'Reports',            path: '/reports',    icon: 'file',  roles: [TRAINER, ADMIN] },
     ],
   },
@@ -32,8 +34,15 @@ export function navFor(role) {
     .filter((section) => section.items.length > 0);
 }
 
+// Pages reached from inside another page rather than from the sidebar.
+const SUB_PAGES = [
+  { path: '/admin/audit-log', section: 'User Management', label: 'Audit Log' },
+];
+
 // Page title for the top bar breadcrumb.
 export function titleFor(pathname) {
+  const sub = SUB_PAGES.find((p) => pathname.startsWith(p.path));
+  if (sub) return { section: sub.section, label: sub.label };
   for (const section of NAV_SECTIONS) {
     const match = section.items.find((item) => pathname.startsWith(item.path));
     if (match) return { section: section.title, label: match.label };

@@ -298,3 +298,18 @@
     display: none;
   }
 }
+
+/* ---------- Set-password and Forgot-password pages (no hero) ---------- */
+.signin__panel--standalone {
+  min-height: 100%;
+}
+
+.signin__form--nested {
+  width: 100%;
+}
+
+.signin__alert--success {
+  border-color: var(--color-success-soft);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
