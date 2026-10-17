@@ -67,3 +67,21 @@ export function formatBytes(bytes) {
 export function plural(count, word, pluralWord = `${word}s`) {
   return `${count} ${count === 1 ? word : pluralWord}`;
 }
+
+// Whole days from today to an API day ('YYYY-MM-DD'), in the user's time
+// zone: 0 = today, 1 = tomorrow, -2 = two days ago.
+export function daysUntil(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((new Date(y, m - 1, d) - today) / 86400000);
+}
+
+// "Due today", "Due tomorrow", "Due in 5 days", "Overdue by 2 days".
+export function dueLabel(value) {
+  const days = daysUntil(value);
+  if (days < 0) return `Overdue by ${plural(-days, 'day')}`;
+  if (days === 0) return 'Due today';
+  if (days === 1) return 'Due tomorrow';
+  return `Due in ${days} days`;
+}

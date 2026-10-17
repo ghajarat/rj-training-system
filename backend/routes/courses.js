@@ -16,7 +16,6 @@
 //
 // Every change writes an audit row in the same transaction (FR2). Files are
 // only deleted from disk AFTER the transaction commits.
-const fs = require('fs');
 const express = require('express');
 const db = require('../db');
 const HttpError = require('../utils/httpError');
@@ -26,6 +25,7 @@ const audit = require('../services/audit');
 const materialFiles = require('../services/materialFiles');
 const { COURSE_SELECT, toCourseDto, findCourseById } = require('../services/courses');
 const { lockPlan } = require('../services/plans');
+const { syncAssignmentStatus } = require('../services/progress');
 const {
   isUuid, requireUuid, parsePagination, paginationDto, likePattern, readText, readHttpUrl,
 } = require('../utils/validate');
@@ -65,12 +65,6 @@ async function lockCourse(client, id) {
 }
 
 const materialType = url => materialFiles.describe(url)?.type || 'none';
-
-// Turns "Fire Fighting / On Board" into a safe download name.
-function downloadName(courseName, ext) {
-  const base = courseName.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'material';
-  return `${base}.${ext}`;
-}
 
 // ---------------------------------------------------------------------
 // Routes
@@ -147,6 +141,8 @@ router.post('/', uploadMaterial, async (req, res) => {
          RETURNING course_id`,
         [plan.plan_id, name, materialUrl, duration]);
       const courseId = rows[0].course_id;
+      // FR5: trainees who had finished this plan now have one more course to do.
+      await syncAssignmentStatus(client, plan.plan_id);
 
       await audit.record(client, {
         actorId: req.user.id,
@@ -271,6 +267,8 @@ router.delete('/:id', async (req, res) => {
       `UPDATE courses SET sequence_order = sequence_order - 1
         WHERE plan_id = $1 AND sequence_order > $2`,
       [plan.plan_id, course.sequence_order]);
+    // FR5: removing the last unfinished course can complete the plan.
+    await syncAssignmentStatus(client, plan.plan_id);
     await audit.record(client, {
       actorId: req.user.id,
       action: audit.ACTIONS.COURSE_DELETED,
@@ -285,27 +283,12 @@ router.delete('/:id', async (req, res) => {
 
 // GET /api/courses/:id/material  →  the file, as a download               FR7
 // Files are not served from a public static folder: every download goes
-// through authenticate. (Phase 4c adds trainee access to assigned courses.)
+// through authenticate. Trainees use GET /api/me/courses/:id/material,
+// which only serves courses in plans assigned to them (FR4).
 router.get('/:id/material', async (req, res) => {
   const course = await findCourseById(requireUuid(req.params.id, 'course id'));
   if (!course) throw new HttpError(404, 'COURSE_NOT_FOUND', 'That course does not exist.');
-
-  const filePath = materialFiles.pathFor(course.material_url);
-  if (!filePath) {
-    throw new HttpError(404, 'NO_FILE', course.material_url
-      ? 'This course links to a web page, not an uploaded file.'
-      : 'This course has no material yet.');
-  }
-  try {
-    await fs.promises.access(filePath);
-  } catch {
-    throw new HttpError(404, 'FILE_MISSING', 'The file for this course could not be found on the server. Upload it again.');
-  }
-
-  // res.download sets Content-Type from the extension and
-  // Content-Disposition: attachment with the readable name.
-  const ext = materialFiles.describe(course.material_url).type;
-  res.download(filePath, downloadName(course.course_name, ext));
+  await materialFiles.sendCourseFile(res, course);
 });
 
 module.exports = router;

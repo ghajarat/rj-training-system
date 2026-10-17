@@ -10,10 +10,27 @@
 //                  trainee is under 100%
 //   status         completed | overdue | in_progress | not_started
 //
+// Per course, for one trainee (FR5, Phase 4c):
+//   not_started    no progress row, or 0% and never opened
+//   started        0%, but opened (last_accessed is set)
+//   in_progress    1–99%
+//   completed      100%
+//
 // Nothing is stored: it is computed from progress on every request, so it
 // can never drift out of date. Deactivated trainees are left out (their rows
-// stay in the database; FR19 keeps history).
+// stay in the database; FR19 keeps history). The one stored copy is GP1's
+// plan_assignments.status, kept in step by syncAssignmentStatus below.
 const db = require('../db');
+const materialFiles = require('./materialFiles');
+
+// Course status from a LEFT JOIN of progress aliased "pr".
+const COURSE_STATUS_SQL = `
+  CASE
+    WHEN pr.completion_pct = 100            THEN 'completed'
+    WHEN pr.completion_pct > 0              THEN 'in_progress'
+    WHEN pr.last_accessed IS NOT NULL       THEN 'started'
+    ELSE 'not_started'
+  END`;
 
 // Two CTEs. Use as:  WITH ${PROGRESS_CTE} SELECT ... FROM ap ...
 //   ap_raw  one row per assignment, with the numbers
@@ -112,10 +129,17 @@ async function planProgress(planId, queryable = db) {
 
 // One trainee: every plan they are assigned, with per-course detail.
 //   → [{ planId, planName, dueDate, ...progress, courses: [...] }]
-async function traineeProgress(traineeId, queryable = db) {
+//
+// Used by the trainer's view of a trainee (/api/trainees/:id/progress) and by
+// the trainee's own view (/api/me/plans), so the two always agree. Only the
+// trainee's own view passes { withFeedback: true } (their rating and comment).
+async function traineeProgress(traineeId, queryable = db, { withFeedback = false } = {}) {
   const plans = await queryable.query(
     `WITH ${PROGRESS_CTE}
-     SELECT ap.*, tp.plan_name, to_char(tp.end_date, 'YYYY-MM-DD') AS due_date,
+     SELECT ap.*, tp.plan_name, tp.description,
+            to_char(tp.start_date, 'YYYY-MM-DD') AS start_date,
+            (tp.start_date > CURRENT_DATE) AS upcoming,
+            to_char(tp.end_date, 'YYYY-MM-DD') AS due_date,
             to_char(ap.assigned_date, 'YYYY-MM-DD') AS assigned_on
        FROM ap
        JOIN training_plans tp ON tp.plan_id = ap.plan_id
@@ -124,11 +148,14 @@ async function traineeProgress(traineeId, queryable = db) {
     [traineeId]);
 
   const courses = await queryable.query(
-    `SELECT c.plan_id, c.course_id, c.course_name, c.sequence_order, c.duration,
-            COALESCE(pr.completion_pct, 0) AS completion_pct, pr.last_accessed
+    `SELECT c.plan_id, c.course_id, c.course_name, c.sequence_order, c.duration, c.material_url,
+            COALESCE(pr.completion_pct, 0) AS completion_pct, pr.last_accessed,
+            ${COURSE_STATUS_SQL} AS course_status,
+            fb.rating, fb.comment
        FROM plan_assignments pa
        JOIN courses c        ON c.plan_id = pa.plan_id
        LEFT JOIN progress pr ON pr.course_id = c.course_id AND pr.trainee_id = pa.trainee_id
+       LEFT JOIN feedback fb ON fb.course_id = c.course_id AND fb.trainee_id = pa.trainee_id
       WHERE pa.trainee_id = $1
       ORDER BY c.plan_id, c.sequence_order`,
     [traineeId]);
@@ -136,6 +163,9 @@ async function traineeProgress(traineeId, queryable = db) {
   return plans.rows.map(p => ({
     planId: p.plan_id,
     planName: p.plan_name,
+    description: p.description,
+    startDate: p.start_date,
+    upcoming: p.upcoming,               // start date still in the future
     dueDate: p.due_date,
     assignedDate: p.assigned_on,
     ...toAssignmentProgressDto(p),
@@ -148,10 +178,40 @@ async function traineeProgress(traineeId, queryable = db) {
         durationMinutes: c.duration,
         completionPct: c.completion_pct,
         lastAccessedAt: c.last_accessed,
+        status: c.course_status,
+        material: materialFiles.describe(c.material_url),   // null | { type, label, url }
+        ...(withFeedback && {
+          feedback: c.rating === null ? null : { rating: c.rating, comment: c.comment },
+        }),
       })),
   }));
 }
 
+// plan_assignments.status (GP1: 'active' | 'completed') is the one stored
+// copy of plan completion. It is recomputed whenever something can change it,
+// inside the same transaction as that change:
+//   - a trainee updates progress           (traineeId given)
+//   - a trainer adds or deletes a course   (every trainee of the plan)
+//   - a trainee is assigned                (they may already have progress)
+// A plan with no courses stays 'active': there is nothing to complete.
+async function syncAssignmentStatus(client, planId, traineeId = null) {
+  await client.query(
+    `UPDATE plan_assignments pa
+        SET status = CASE WHEN s.total_courses > 0 AND s.completed_courses = s.total_courses
+                          THEN 'completed' ELSE 'active' END
+       FROM (SELECT a.assign_id,
+                    COUNT(c.course_id) AS total_courses,
+                    COUNT(pr.progress_id) FILTER (WHERE pr.completion_pct = 100) AS completed_courses
+               FROM plan_assignments a
+               LEFT JOIN courses c   ON c.plan_id = a.plan_id
+               LEFT JOIN progress pr ON pr.course_id = c.course_id AND pr.trainee_id = a.trainee_id
+              WHERE a.plan_id = $1 AND ($2::uuid IS NULL OR a.trainee_id = $2)
+              GROUP BY a.assign_id) s
+      WHERE pa.assign_id = s.assign_id`,
+    [planId, traineeId]);
+}
+
 module.exports = {
-  PROGRESS_CTE, PLAN_STATS_CTE, toStatsDto, planProgress, traineeProgress,
+  PROGRESS_CTE, PLAN_STATS_CTE, COURSE_STATUS_SQL, toStatsDto, planProgress, traineeProgress,
+  syncAssignmentStatus,
 };

@@ -22,7 +22,7 @@ const audit = require('../services/audit');
 const materialFiles = require('../services/materialFiles');
 const { toCourseDto, findCoursesByPlan } = require('../services/courses');
 const { PLAN_SELECT, toPlanDto, findPlanById, lockPlan } = require('../services/plans');
-const { planProgress } = require('../services/progress');
+const { planProgress, syncAssignmentStatus } = require('../services/progress');
 const {
   isUuid, isDate, requireUuid, parsePagination, paginationDto, likePattern, readText,
 } = require('../utils/validate');
@@ -339,6 +339,8 @@ router.post('/:id/assignments', async (req, res) => {
        RETURNING trainee_id`,
       [id, trainees.map(t => t.user_id)]);
     const newIds = new Set(inserted.map(r => r.trainee_id));
+    // Someone re-assigned a plan they had already finished keeps "completed".
+    for (const traineeId of newIds) await syncAssignmentStatus(client, id, traineeId);
 
     // One audit row per trainee, so the Audit Log's user filter shows it.
     for (const t of trainees.filter(tr => newIds.has(tr.user_id))) {

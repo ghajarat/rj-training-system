@@ -64,3 +64,26 @@ status from `services/progress.js`.
 ### Table count after 002
 
 Unchanged: 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.
+
+---
+
+## 003_trainee_feedback.sql — Phase 4c (Training Management for Trainees)
+
+Approved by the team before implementation.
+
+| Change | Why |
+|---|---|
+| `UNIQUE (trainee_id, course_id)` on `feedback` | **FR6**: a trainee gives one piece of feedback per course and can edit it. Without the constraint, a double click or two open tabs could store two rows, and that trainee would count twice in the course's average rating (Analytics, Phase 7). The API saves with `INSERT ... ON CONFLICT (trainee_id, course_id) DO UPDATE`. Any duplicates from before the rule are removed first. |
+
+### What is deliberately *not* a schema change
+
+| Need | How it is met with the existing columns |
+|---|---|
+| Course status (not started / started / in progress / completed) | Derived from `progress`: no row = not started; `completion_pct` 0 = started; 1–99 = in progress; 100 = completed. A trainee sets 0, 25, 50, 75 or 100. Opening a material marks the course started. |
+| When a trainee last worked on a course | `progress.last_accessed`, set on every progress change. |
+| Plan completion (**FR5**) | Still computed in `services/progress.js`. `plan_assignments.status` (GP1) is now kept in step: `completed` when every course of the plan is at 100%, otherwise `active`. It is updated in the same transaction as the progress change, and again when a trainer adds or deletes a course (a new course reopens a finished plan). |
+| Sentiment of a feedback comment | `feedback.sentiment_score` (GP1) stays NULL until Phase 7. Editing a comment sets it back to NULL so it is scored again. |
+
+### Table count after 003
+
+Unchanged: 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.

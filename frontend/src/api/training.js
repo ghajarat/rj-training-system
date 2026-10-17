@@ -35,10 +35,11 @@ export const deleteCourse = (id) => api.delete(`/courses/${id}`);
 
 // Downloads a stored material through the API (it needs the Bearer token,
 // so a plain <a href> would be rejected), then hands it to the browser.
-export async function downloadMaterial(course) {
+// Trainees pass their own endpoint (api/me.js), which checks the assignment.
+export async function downloadMaterial(course, url = `/courses/${course.id}/material`) {
   let response;
   try {
-    response = await api.get(`/courses/${course.id}/material`, { responseType: 'blob', ...UPLOAD_OPTIONS });
+    response = await api.get(url, { responseType: 'blob', ...UPLOAD_OPTIONS });
   } catch (err) {
     // With responseType 'blob' the JSON error body arrives as a Blob too.
     if (err.response?.data instanceof Blob) {
@@ -46,15 +47,15 @@ export async function downloadMaterial(course) {
     }
     throw err;
   }
-  const url = URL.createObjectURL(response.data);
+  const blobUrl = URL.createObjectURL(response.data);
   const link = document.createElement('a');
-  link.href = url;
+  link.href = blobUrl;
   link.download = `${course.name}.${course.material.type}`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   // Give the browser a moment to start the download before freeing it.
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 }
 
 export const createPlan = (body) => api.post('/plans', body).then((r) => r.data);

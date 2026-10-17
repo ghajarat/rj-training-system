@@ -25,16 +25,17 @@ import ComingSoon from './pages/ComingSoon';
 import TrainingMaterials from './pages/training/TrainingMaterials';
 import TrainingPlans from './pages/training/TrainingPlans';
 import PlanDetail from './pages/training/PlanDetail';
+import MyMaterials from './pages/training/MyMaterials';
 import MyTrainees from './pages/training/MyTrainees';
 
 const { TRAINEE, TRAINER, ADMIN } = ROLES;
 
 // One URL, two screens: trainers and admins manage materials (FR7, Phase 4b);
-// trainees will study them (Phase 4c).
+// trainees study them and track their progress (FR4–FR6, Phase 4c).
 function MaterialsPage() {
   const { user } = useAuth();
   return user.role === TRAINEE
-    ? <ComingSoon title="Training Materials" phase="Phase 4c" />
+    ? <MyMaterials />
     : <TrainingMaterials />;
 }
 

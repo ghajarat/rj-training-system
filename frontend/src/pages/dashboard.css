@@ -1,0 +1,166 @@
+/* My Dashboard (Phase 4c). Design: docs/designs/Trainee_dashboard.png */
+
+.stat-card__label--icon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stat-card__icon {
+  color: var(--color-accent);
+}
+
+.stat-card__unit {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+/* The grid sets the spacing, not ".panel + .panel" */
+.dashboard-grid > .panel + .panel {
+  margin-top: 0;
+}
+
+.ai-slot {
+  margin-top: 16px;
+}
+
+.dashboard-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-panel__head .panel__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.link-arrow:hover {
+  text-decoration: underline;
+}
+
+/* Active Learning Paths */
+.path-list,
+.due-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.path-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px 110px 84px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.path-row:last-child {
+  border-bottom: 0;
+}
+
+.path-row__name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.path-row__due {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* Upcoming due dates */
+.due-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.due-item:last-child {
+  border-bottom: 0;
+}
+
+.due-item__date {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 52px;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-on-dark);
+  line-height: 1.1;
+}
+
+.due-item__date.is-overdue {
+  background: var(--color-danger);
+}
+
+.due-item__month {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.due-item__day {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.due-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .path-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+
+  .path-row__progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .path-row__due {
+    display: none;
+  }
+}
