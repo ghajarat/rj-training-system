@@ -31,4 +31,9 @@ module.exports = {
     maxAttempts: Number(process.env.LOGIN_MAX_ATTEMPTS) || 5,
     lockMinutes: Number(process.env.LOGIN_LOCK_MINUTES) || 15,
   },
+
+  // FR1: how long an invitation / password-reset link stays valid.
+  setup: {
+    expiresHours: Number(process.env.INVITE_EXPIRES_HOURS) || 72,
+  },
 };

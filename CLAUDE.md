@@ -27,16 +27,24 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `config.js` | Loads `.env` once and fails fast if `DATABASE_URL` / `JWT_SECRET` are missing or the secret is under 32 chars. Exposes `port`, `clientOrigin`, `jwt`, `login` (lock settings). |
 | `db/index.js` | Shared `pg` Pool. Use `db.query(text, params)`; use `db.getClient()` + `BEGIN/COMMIT/ROLLBACK` for transactions. |
 | `db/schema.sql` | The 14 GP1 tables, FK indexes, unique `progress(trainee_id, course_id)`, HNSW cosine index on `embeddings`. Idempotent (`IF NOT EXISTS`). |
-| `db/migrate.js` | Applies `schema.sql` via Node (no psql needed). `--reset` drops all 14 tables first; refuses in production. |
-| `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 5 users, 3 plans with courses, assignments, progress, feedback, KPIs, notifications. Refuses in production. |
-| `middleware/auth.js` | `authenticate` (Bearer JWT → `req.user = { id, role, name }`) and `authorize(...roles)` (403 if role not allowed). |
-| `routes/auth.js` | `POST /api/auth/login` → `{ token, user }`; `GET /api/auth/me` → `{ user }`. Exports `toUserDto` (the one user shape sent to the frontend; never includes `password_hash`). |
-| `routes/users.js` | `GET /api/users` → `{ users }`, Admin only (router-level `authenticate, authorize('Admin')`). |
+| `db/migrate.js` | Applies `schema.sql`, then each not-yet-run file in `db/migrations/` in its own transaction, recorded in `schema_migrations`. `--reset` drops all tables first; refuses in production. |
+| `db/migrations/001_user_management.sql` | Phase 4a: `users.is_active`, nullable `password_hash`, `setup_token_hash/_expires_at`, `audit_logs` table. Explained in `docs/schema-changes.md`. |
+| `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 3 plans with courses, assignments, progress, feedback, KPIs, notifications, audit rows. Prints a demo invite link. Refuses in production. |
+| `middleware/auth.js` | `authenticate` (Bearer JWT, then loads current role + `is_active` from the DB every request → `req.user = { id, role, name }`; 401 `ACCOUNT_DEACTIVATED`) and `authorize(...roles)` (403 if role not allowed). |
+| `routes/auth.js` | `POST /api/auth/login` → `{ token, user }` (403 `ACCOUNT_DEACTIVATED`, logs LOGIN / LOGIN_FAILED); `GET /api/auth/me`; public `POST /api/auth/setup/verify` and `POST /api/auth/setup` (one-time invite / reset links). |
+| `routes/users.js` | Admin only. `GET /` (search, role, departmentId, status, page, pageSize), `POST /` (invite), `GET/PATCH /:id`, `POST /:id/setup-link`, `/:id/deactivate`, `/:id/reactivate`. Self-deactivate, self-role-change and last-active-admin guards. |
+| `routes/departments.js` | `GET /api/departments` → `{ departments }`, Admin only. |
+| `routes/auditLogs.js` | `GET /api/audit-logs` (action, userId, search, from, to, page), Admin only, read-only. |
+| `services/users.js` | `USER_SELECT` (with derived `status` and `last_active_at`), `toUserDto` (the one user shape sent to the frontend; never includes secrets), `findUserById`. |
+| `services/audit.js` | `ACTIONS` and `record(client, { actorId, action, targetUserId, details })` — call with the transaction's client. |
+| `utils/setupToken.js` | Random one-time token, its SHA-256, the link URL, and `expirySql()` (expiry uses the DB clock). |
+| `utils/validate.js` | `requireUuid`, `parsePagination`, `paginationDto`, `likePattern`, `isDate`, `EMAIL_RE`. |
+| `test/userManagement.test.js` | `npm test`: node:test + supertest, 62 tests. **Re-seeds the dev database.** |
 | `services/loginAttempts.js` | In-memory failed-login counter and temporary lock (resets on server restart). |
 | `utils/httpError.js` | `throw new HttpError(status, code, message)` from any route; `app.js` turns it into the JSON error response. |
 | `utils/jwt.js` | `signToken(userRow)` / `verifyToken(token)` — HS256, issuer `rj-training-system`, payload `{ sub, role, name }`. |
-| `utils/password.js` | `hashPassword` / `verifyPassword` (bcrypt, 12 rounds) with a dummy hash so unknown emails take as long as wrong passwords. |
-| `.env.example` | `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_ORIGIN`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `SEED_PASSWORD`. |
+| `utils/password.js` | `hashPassword` / `verifyPassword` (bcrypt, 12 rounds) with a dummy hash so unknown emails take as long as wrong passwords; `checkPasswordStrength` (10–72 chars, letter + digit). |
+| `.env.example` | `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_ORIGIN` (also the base of invite links), `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `INVITE_EXPIRES_HOURS`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `SEED_PASSWORD`. |
 
 Express 5 forwards errors thrown in async handlers to the error handler, so routes `throw` instead of calling `next(err)`.
 
@@ -46,7 +54,7 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 |---|---|
 | `index.html` | Loads Montserrat from Google Fonts. |
 | `src/main.jsx` | Imports `tokens.css` + `global.css`, renders `<App />`. |
-| `src/App.jsx` | **All routes.** Public: `/signin`, `/forgot-password`. Everything else sits inside `<ProtectedRoute>` → `<AppShell>`, with per-route `<ProtectedRoute roles={[...]}>`. `*` → `RoleHomeRedirect`. |
+| `src/App.jsx` | **All routes.** Public: `/signin`, `/forgot-password`, `/set-password`. Everything else sits inside `<ProtectedRoute>` → `<AppShell>`, with per-route `<ProtectedRoute roles={[...]}>`. `*` → `RoleHomeRedirect`. |
 | `src/api/client.js` | Shared axios instance (`VITE_API_URL`, 15 s timeout). Adds `Authorization: Bearer`; on a 401 (except login) clears the token and fires `rj:session-expired`. `getErrorMessage(err)` turns any error into a user-facing sentence. |
 | `src/auth/AuthContext.jsx` | `AuthProvider`: `user`, `status` (`loading`/`authenticated`/`anonymous`), `notice`, `login(email, pw, remember)`, `logout()`, `clearNotice()`. Restores the session via `GET /auth/me` on load. |
 | `src/auth/useAuth.js` | `AuthContext` + `useAuth()` hook. |
@@ -55,8 +63,12 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/auth/tokenStorage.js` | JWT in `localStorage` ("Remember this device") or `sessionStorage`, key `rj.token`. |
 | `src/layout/AppShell.jsx` | Signed-in layout: 240px sidebar, top bar (breadcrumb, disabled search, bell, user), `<Outlet />`. Sidebar becomes a drawer under 900px. |
 | `src/layout/navigation.js` | `NAV_SECTIONS` (sidebar items + allowed roles), `navFor(role)`, `titleFor(path)`. Keep in sync with `App.jsx`. |
-| `src/components/` | Shared UI: `Button` (primary/accent/secondary/ghost, sm/md, icon, loading), `Input` (label, icon, error/hint, password toggle), `Icon` (inline SVG set — add paths to `PATHS`), `BrandMark`. |
-| `src/pages/` | `SignIn`, `ForgotPassword` (placeholder), `MyDashboard`, `TrainerOverview` (shells), `UserManagement` (real list), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, role-badge). |
+| `src/components/` | Shared UI: `Button` (primary/accent/secondary/ghost/danger, sm/md, icon, loading), `Input` (label, icon, error/hint, password toggle), `Select`, `Modal` (native `<dialog>`), `ConfirmDialog`, `Badge` (tones), `Menu` (row action dropdown), `Pagination`, `Icon` (inline SVG set — add paths to `PATHS`), `BrandMark`. |
+| `src/hooks/` | `useFetch(url, params)` → `{ data, error, loading, reload }` (ignores stale responses; null url = skip); `useDebouncedValue`. |
+| `src/api/admin.js` | User-management and set-password API calls. |
+| `src/utils/format.js` | `initials`, `formatDate`, `formatDateTime`, `timeAgo`, `plural`. |
+| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard`, `TrainerOverview` (shells), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm). |
+| `src/pages/admin/` | `UserManagement` (+ `InviteUserModal`, `EditUserModal`, `SetupLinkModal`, `UserBadges`, `userOptions`), `AuditLog` (+ `auditLabels`), `admin.css`. |
 | `src/styles/` | `tokens.css` (design tokens), `global.css`. |
 | `.env.example` | `VITE_API_URL=http://localhost:5000/api` |
 
@@ -78,7 +90,7 @@ From `frontend/`:
 - `npm run lint` — ESLint
 - `npm run preview` — serve the built `dist/`
 
-There is no test runner yet (`npm test` in backend is the npm placeholder).
+From `backend/`, `npm test` runs the API tests (node:test + supertest). It migrates and **re-seeds the database in DATABASE_URL** first, so use it on a dev database only. The frontend has no tests yet.
 
 ## Database
 
@@ -87,9 +99,9 @@ UUID primary keys, CHECK constraints, VECTOR(1536) on embeddings, 3NF with one d
 
 Schema rule: do not edit schema.sql silently. If a feature truly needs a schema change, propose it during planning, wait for approval, implement it as a separate migration file, and log it in docs/schema-changes.md (what changed + why). The GP2 document must explain every deviation from GP1.
 
-Migrations: `db/schema.sql` is the GP1 baseline. Approved changes go in numbered files in `db/migrations/` (`001_*.sql`, `002_*.sql`, ...), applied in order by a runner that records which files have already run (planned for Phase 4a).
+Migrations: `db/schema.sql` is the GP1 baseline. Approved changes go in numbered files in `db/migrations/` (`001_*.sql`, `002_*.sql`, ...), applied in order by `db/migrate.js`, which records them in `schema_migrations`. Each deviation is explained in `docs/schema-changes.md`.
 
-Seeded demo accounts (password RJtraining#2026): admin@rj.com, trainer@rj.com, trainee@rj.com, trainee2@rj.com, trainee3@rj.com.
+Seeded demo accounts (password RJtraining#2026): admin@rj.com, trainer@rj.com, trainee@rj.com, trainee2@rj.com, trainee3@rj.com. Also huda.mansour@rj.com (deactivated) and sami.odeh@rj.com (pending invite; the seed prints its link).
 
 ## Roles & routing
 
@@ -134,7 +146,7 @@ Sign-In, Forgot/Reset Password, My Dashboard, AI Assistant, Training Materials, 
 - Add an empty state to the User Management list.
 - The Forgot Password placeholder will become the set-password page if invite option (a) is chosen.
 - Deactivation (FR19) must take effect immediately: authenticate must load the user's current status and role from the database on every request instead of trusting the JWT alone.
-- Schema changes (users.is_active, invite token columns, audit_logs table) are PENDING teammate approval. Plan for them, but do not build them until the developer confirms.
+- Schema changes (users.is_active, setup token columns, audit_logs table) were approved by the team and built as migration 001 (see docs/schema-changes.md).
 
 ### Design decisions (these override the screenshots in docs/designs/)
 
@@ -147,8 +159,8 @@ Sign-In:
 User Management:
 - No Employee ID column. It is not in the schema and not worth another deviation.
 - Last active: derived from the user's most recent login in audit_logs. No new column (depends on the pending audit_logs table, which must therefore also record logins).
-- Active status: from users.is_active (pending approval).
-- Pending invitations: users with an unused, unexpired invite token (pending approval).
+- Active status: from users.is_active.
+- Pending invitations: users with no password yet and an unexpired setup token.
 
 Sidebar items not yet routed:
 - SOP Library (Admin): keep, with a placeholder page saying it arrives in Phase 5 (FR13).
@@ -160,7 +172,9 @@ Sidebar items not yet routed:
 
 - feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored.
 
-## Open decisions for Phase 4 (resolve during planning)
+## Decisions for Phase 4
+
+Resolved in Phase 4a: audit log = audit_logs table; invite flow = option (a), one-time link plus /set-password, which also serves admin-issued password resets.
 
 - Audit log (FR2): none of the 14 tables is an audit log. Options: add an audit_logs table (documented deviation) or log to a file. Recommendation: add the table.
 - Invite flow (FR1): no email service in scope. Options: (a) admin gets a one-time invite link to copy and send manually, leading to a set-password page (reuses the Reset Password screen); (b) admin sets a temporary password. Recommendation: (a). The users table has no invite or active columns, so (a) needs the pending schema change.

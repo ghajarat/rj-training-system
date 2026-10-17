@@ -1,6 +1,7 @@
-// Issue and verify JSON Web Tokens (OR05). The payload carries just enough
-// to authorize a request without a database round trip: who the user is and
-// which role they hold (NFR07).
+// Issue and verify JSON Web Tokens (OR05). The payload says who the user is
+// and which role they held at sign-in. middleware/auth.js still re-reads the
+// role and active status from the database on every request (FR19), so a
+// deactivation or role change does not wait for the token to expire.
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 

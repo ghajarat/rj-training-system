@@ -36,7 +36,7 @@
 
 .btn--primary {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-dark);
 }
 .btn--primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
@@ -44,10 +44,10 @@
 
 .btn--accent {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-dark);
 }
 .btn--accent:hover:not(:disabled) {
-  background: #96753F;
+  background: var(--color-accent-hover);
 }
 
 .btn--secondary {
@@ -64,7 +64,7 @@
   color: var(--color-text-muted);
 }
 .btn--ghost:hover:not(:disabled) {
-  background: rgba(95, 99, 103, 0.08);
+  background: var(--color-primary-faint);
   color: var(--color-text);
 }
 
@@ -88,4 +88,13 @@
 @media (prefers-reduced-motion: reduce) {
   .btn { transition: none; }
   .btn__spinner { animation-duration: 2s; }
+}
+
+/* Destructive actions such as Deactivate (FR19) */
+.btn--danger {
+  background: var(--color-danger);
+  color: var(--color-on-dark);
+}
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(0.92);
 }

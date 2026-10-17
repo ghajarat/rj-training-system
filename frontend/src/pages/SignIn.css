@@ -12,8 +12,8 @@
   flex-direction: column;
   padding: 36px 48px;
   background:
-    linear-gradient(160deg, #6A6E71 0%, #4A4E51 45%, #2F3234 100%);
-  color: #fff;
+    linear-gradient(160deg, var(--color-hero-start) 0%, var(--color-hero-mid) 45%, var(--color-hero-end) 100%);
+  color: var(--color-on-dark);
   isolation: isolate;
 }
 
@@ -24,7 +24,7 @@
   width: 70%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(214, 186, 120, 0.55) 0%, rgba(168, 133, 74, 0.18) 38%, transparent 68%);
+  background: radial-gradient(circle, var(--color-hero-glow) 0%, var(--color-accent-faint) 38%, transparent 68%);
   z-index: -1;
 }
 
@@ -35,10 +35,10 @@
   width: 230px;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 1px solid rgba(168, 133, 74, 0.28);
+  border: 1px solid var(--color-accent-line-soft);
   box-shadow:
-    inset 0 0 0 28px rgba(0, 0, 0, 0),
-    inset 0 0 0 29px rgba(168, 133, 74, 0.16);
+    inset 0 0 0 28px transparent,
+    inset 0 0 0 29px var(--color-accent-faint);
   z-index: -1;
 }
 
@@ -46,7 +46,7 @@
 .signin__compass::after {
   content: '';
   position: absolute;
-  background: rgba(168, 133, 74, 0.32);
+  background: var(--color-accent-line-soft);
 }
 
 .signin__compass::before {
@@ -81,7 +81,7 @@
 .signin__pill {
   display: inline-block;
   padding: 4px 12px;
-  border: 1px solid rgba(168, 133, 74, 0.55);
+  border: 1px solid var(--color-accent-line);
   border-radius: 999px;
   font-size: 9px;
   font-weight: 600;
@@ -109,16 +109,16 @@
   max-width: 380px;
   font-size: 12px;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--color-on-dark-soft);
 }
 
 .signin__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin: 44px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-on-dark-faint);
   border-radius: var(--radius);
-  background: rgba(30, 32, 34, 0.55);
+  background: var(--color-hero-panel);
   backdrop-filter: blur(4px);
 }
 
@@ -127,7 +127,7 @@
 }
 
 .signin__stats > div + div {
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--color-on-dark-faint);
 }
 
 .signin__stats dt {
@@ -146,7 +146,7 @@
 
 .signin__stats span {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-on-dark-muted);
 }
 
 .signin__badges {
@@ -160,7 +160,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-on-dark-muted);
 }
 
 .signin__badges li::before {
@@ -223,7 +223,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid rgba(182, 51, 42, 0.25);
+  border: 1px solid var(--color-danger-border);
   border-radius: var(--radius);
   background: var(--color-danger-soft);
   color: var(--color-danger);
@@ -297,4 +297,19 @@
   .signin__hero {
     display: none;
   }
+}
+
+/* ---------- Set-password and Forgot-password pages (no hero) ---------- */
+.signin__panel--standalone {
+  min-height: 100%;
+}
+
+.signin__form--nested {
+  width: 100%;
+}
+
+.signin__alert--success {
+  border-color: var(--color-success-soft);
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }

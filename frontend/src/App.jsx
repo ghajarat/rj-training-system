@@ -1,6 +1,7 @@
 // All routes live here.
 //
-//   /signin, /forgot-password           public
+//   /signin, /forgot-password,
+//   /set-password                        public (invite / reset links, FR1)
 //   everything else                      inside <AppShell>, signed-in only
 //   per-page `roles`                     enforced by <ProtectedRoute roles={...}>
 //
@@ -14,7 +15,9 @@ import SignIn from './pages/SignIn';
 import ForgotPassword from './pages/ForgotPassword';
 import MyDashboard from './pages/MyDashboard';
 import TrainerOverview from './pages/TrainerOverview';
-import UserManagement from './pages/UserManagement';
+import SetPassword from './pages/SetPassword';
+import UserManagement from './pages/admin/UserManagement';
+import AuditLog from './pages/admin/AuditLog';
 import ComingSoon from './pages/ComingSoon';
 
 const { TRAINEE, TRAINER, ADMIN } = ROLES;
@@ -26,6 +29,7 @@ export default function App() {
         <Routes>
           <Route path="/signin" element={<SignIn />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/set-password" element={<SetPassword />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
@@ -39,6 +43,9 @@ export default function App() {
 
               <Route element={<ProtectedRoute roles={[ADMIN]} />}>
                 <Route path="/admin/users" element={<UserManagement />} />
+                <Route path="/admin/audit-log" element={<AuditLog />} />
+                <Route path="/admin/sop-library" element={<ComingSoon title="SOP Library" phase="Phase 5 · FR13" />} />
+                <Route path="/admin/system-health" element={<ComingSoon title="System Health" phase="Phase 8 · Reports" />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={[TRAINEE, TRAINER]} />}>
