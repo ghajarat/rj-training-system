@@ -24,27 +24,38 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 |---|---|
 | `server.js` | Starts the HTTP server on `PORT` (default 5000). |
 | `app.js` | Builds the Express app: CORS (`CLIENT_ORIGIN`), JSON body (1 MB), `GET /api/health`, route mounting, `/api` 404, central error handler. Kept apart from `server.js` so tests can import it. |
-| `config.js` | Loads `.env` once and fails fast if `DATABASE_URL` / `JWT_SECRET` are missing or the secret is under 32 chars. Exposes `port`, `clientOrigin`, `jwt`, `login` (lock settings). |
-| `db/index.js` | Shared `pg` Pool. Use `db.query(text, params)`; use `db.getClient()` + `BEGIN/COMMIT/ROLLBACK` for transactions. |
+| `config.js` | Loads `.env` once and fails fast if `DATABASE_URL` / `JWT_SECRET` are missing or the secret is under 32 chars. Exposes `port`, `clientOrigin`, `jwt`, `login` (lock settings), `setup`, `materials.maxMb`. |
+| `db/index.js` | Shared `pg` Pool. Use `db.query(text, params)`; for multi-step writes use `db.transaction(async (client) => ...)` (BEGIN/COMMIT, ROLLBACK on error). |
 | `db/schema.sql` | The 14 GP1 tables, FK indexes, unique `progress(trainee_id, course_id)`, HNSW cosine index on `embeddings`. Idempotent (`IF NOT EXISTS`). |
 | `db/migrate.js` | Applies `schema.sql`, then each not-yet-run file in `db/migrations/` in its own transaction, recorded in `schema_migrations`. `--reset` drops all tables first; refuses in production. |
 | `db/migrations/001_user_management.sql` | Phase 4a: `users.is_active`, nullable `password_hash`, `setup_token_hash/_expires_at`, `audit_logs` table. Explained in `docs/schema-changes.md`. |
-| `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 3 plans with courses, assignments, progress, feedback, KPIs, notifications, audit rows. Prints a demo invite link. Refuses in production. |
+| `db/migrations/002_training_management.sql` | Phase 4b: `courses.sequence_order` + deferrable `UNIQUE (plan_id, sequence_order)`, `UNIQUE (plan_id, trainee_id)` on `plan_assignments`. A course still belongs to one plan (GP1). |
+| `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 4 plans with ordered courses (one overdue plan, one demo PDF in `uploads/materials/`, one web link), assignments, progress, feedback, KPIs, notifications, audit rows. Clears old material files. Prints a demo invite link. Refuses in production. |
 | `middleware/auth.js` | `authenticate` (Bearer JWT, then loads current role + `is_active` from the DB every request → `req.user = { id, role, name }`; 401 `ACCOUNT_DEACTIVATED`) and `authorize(...roles)` (403 if role not allowed). |
 | `routes/auth.js` | `POST /api/auth/login` → `{ token, user }` (403 `ACCOUNT_DEACTIVATED`, logs LOGIN / LOGIN_FAILED); `GET /api/auth/me`; public `POST /api/auth/setup/verify` and `POST /api/auth/setup` (one-time invite / reset links). |
 | `routes/users.js` | Admin only. `GET /` (search, role, departmentId, status, page, pageSize), `POST /` (invite), `GET/PATCH /:id`, `POST /:id/setup-link`, `/:id/deactivate`, `/:id/reactivate`. Self-deactivate, self-role-change and last-active-admin guards. |
-| `routes/departments.js` | `GET /api/departments` → `{ departments }`, Admin only. |
+| `routes/departments.js` | `GET /api/departments` → `{ departments }`, Trainer + Admin. |
 | `routes/auditLogs.js` | `GET /api/audit-logs` (action, userId, search, from, to, page), Admin only, read-only. |
+| `routes/courses.js` | FR7, Trainer + Admin. `GET /` (planId, type, search, page), `POST /` (multipart: planId, name, durationMinutes, link, file), `GET/PATCH/DELETE /:id`, `GET /:id/material` (authenticated download). Delete refused (409 `COURSE_HAS_PROGRESS`) once trainees started it. |
+| `routes/plans.js` | FR8/FR9, Trainer + Admin. `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `PUT /:id/order`, `POST /:id/assignments` (`traineeIds` or `departmentId`), `DELETE /:id/assignments/:traineeId`, `GET /:id/progress`. |
+| `routes/trainees.js` | FR8/FR9, Trainer + Admin. `GET /` (search, departmentId, planId → `assignedToPlan`), `GET /:id/progress`. Active trainees only. |
+| `middleware/uploadMaterial.js` | multer 2 disk upload of one `file` to `uploads/materials/<uuid>.<ext>`: extension, size (`MATERIAL_MAX_MB`) and magic-byte checks; `discardUpload(req)` on failure. |
 | `services/users.js` | `USER_SELECT` (with derived `status` and `last_active_at`), `toUserDto` (the one user shape sent to the frontend; never includes secrets), `findUserById`. |
 | `services/audit.js` | `ACTIONS` and `record(client, { actorId, action, targetUserId, details })` — call with the transaction's client. |
+| `services/materialFiles.js` | Where material files live, `material_url` format (`https://...` or `upload:<uuid>.<ext>`), `describe(url)` → `{ type, label, url }`, safe `pathFor`, `removeStored` (call after COMMIT). |
+| `services/courses.js` | `COURSE_SELECT`, `toCourseDto`, `findCourseById`, `findCoursesByPlan`. |
+| `services/plans.js` | `PLAN_SELECT` (with progress totals), `toPlanDto`, `findPlanById`, `lockPlan` (plan row `FOR UPDATE`; always lock plan before course). |
+| `services/progress.js` | FR9 definitions in one place: `PROGRESS_CTE` (per assignment: completion % = FLOOR of course average, missing progress = 0; last activity; overdue; status), `PLAN_STATS_CTE`, `planProgress`, `traineeProgress`. Reuse for Phase 7. |
 | `utils/setupToken.js` | Random one-time token, its SHA-256, the link URL, and `expirySql()` (expiry uses the DB clock). |
-| `utils/validate.js` | `requireUuid`, `parsePagination`, `paginationDto`, `likePattern`, `isDate`, `EMAIL_RE`. |
-| `test/userManagement.test.js` | `npm test`: node:test + supertest, 62 tests. **Re-seeds the dev database.** |
+| `utils/validate.js` | `requireUuid`, `parsePagination`, `paginationDto`, `likePattern`, `isDate` (rejects impossible dates like 2026-02-30), `readText`, `readHttpUrl`, `EMAIL_RE`. |
+| `test/userManagement.test.js` | `npm test`: node:test + supertest, Phase 4a. **Re-seeds the dev database.** |
+| `test/trainingManagement.test.js` | Phase 4b (FR7–FR9), runs with `MATERIAL_MAX_MB=1`. Both files together: 118 tests. |
+| `uploads/` | Uploaded materials (gitignored). Not served statically. |
 | `services/loginAttempts.js` | In-memory failed-login counter and temporary lock (resets on server restart). |
 | `utils/httpError.js` | `throw new HttpError(status, code, message)` from any route; `app.js` turns it into the JSON error response. |
 | `utils/jwt.js` | `signToken(userRow)` / `verifyToken(token)` — HS256, issuer `rj-training-system`, payload `{ sub, role, name }`. |
 | `utils/password.js` | `hashPassword` / `verifyPassword` (bcrypt, 12 rounds) with a dummy hash so unknown emails take as long as wrong passwords; `checkPasswordStrength` (10–72 chars, letter + digit). |
-| `.env.example` | `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_ORIGIN` (also the base of invite links), `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `INVITE_EXPIRES_HOURS`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `SEED_PASSWORD`. |
+| `.env.example` | `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_ORIGIN` (also the base of invite links), `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `INVITE_EXPIRES_HOURS`, `MATERIAL_MAX_MB`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `SEED_PASSWORD`. |
 
 Express 5 forwards errors thrown in async handlers to the error handler, so routes `throw` instead of calling `next(err)`.
 
@@ -63,12 +74,14 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/auth/tokenStorage.js` | JWT in `localStorage` ("Remember this device") or `sessionStorage`, key `rj.token`. |
 | `src/layout/AppShell.jsx` | Signed-in layout: 240px sidebar, top bar (breadcrumb, disabled search, bell, user), `<Outlet />`. Sidebar becomes a drawer under 900px. |
 | `src/layout/navigation.js` | `NAV_SECTIONS` (sidebar items + allowed roles), `navFor(role)`, `titleFor(path)`. Keep in sync with `App.jsx`. |
-| `src/components/` | Shared UI: `Button` (primary/accent/secondary/ghost/danger, sm/md, icon, loading), `Input` (label, icon, error/hint, password toggle), `Select`, `Modal` (native `<dialog>`), `ConfirmDialog`, `Badge` (tones), `Menu` (row action dropdown), `Pagination`, `Icon` (inline SVG set — add paths to `PATHS`), `BrandMark`. |
+| `src/components/` | Shared UI: `Button` (primary/accent/secondary/ghost/danger, sm/md, icon, loading; `btn` classes also work on `<Link>`), `Input` (label, icon, error/hint, password toggle), `Textarea`, `Select`, `FileUpload` (drag-and-drop, type/size check), `ProgressBar` (tones), `Modal` (native `<dialog>`, sizes sm/md/lg), `ConfirmDialog`, `Badge` (tones), `Menu` (row action dropdown), `Pagination`, `Icon` (inline SVG set — add paths to `PATHS`), `BrandMark`. |
 | `src/hooks/` | `useFetch(url, params)` → `{ data, error, loading, reload }` (ignores stale responses; null url = skip); `useDebouncedValue`. |
 | `src/api/admin.js` | User-management and set-password API calls. |
-| `src/utils/format.js` | `initials`, `formatDate`, `formatDateTime`, `timeAgo`, `plural`. |
-| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard`, `TrainerOverview` (shells), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm). |
+| `src/api/training.js` | Course (multipart, upload progress, no timeout), material download (blob), plan, reorder and assignment calls. |
+| `src/utils/format.js` | `initials`, `formatDate`, `formatDateTime`, `formatDay` (API `YYYY-MM-DD` as a local date), `todayIso`, `formatMinutes`, `formatBytes`, `timeAgo`, `plural`. |
+| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard`, `TrainerOverview` (shells), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
 | `src/pages/admin/` | `UserManagement` (+ `InviteUserModal`, `EditUserModal`, `SetupLinkModal`, `UserBadges`, `userOptions`), `AuditLog` (+ `auditLabels`), `admin.css`. |
+| `src/pages/training/` | Phase 4b, Trainer + Admin: `TrainingMaterials` (`/materials`; Trainees get a Phase 4c placeholder), `TrainingPlans` (`/plans`), `PlanDetail` (`/plans/:id`: course order, assign, progress), `MyTrainees` (`/trainees`) + `CourseFormModal`, `PlanFormModal`, `AssignPlanModal`, `TraineeProgressModal`, `trainingOptions`, `training.css`. |
 | `src/styles/` | `tokens.css` (design tokens), `global.css`. |
 | `.env.example` | `VITE_API_URL=http://localhost:5000/api` |
 
@@ -148,6 +161,16 @@ Sign-In, Forgot/Reset Password, My Dashboard, AI Assistant, Training Materials, 
 - Deactivation (FR19) must take effect immediately: authenticate must load the user's current status and role from the database on every request instead of trusting the JWT alone.
 - Schema changes (users.is_active, setup token columns, audit_logs table) were approved by the team and built as migration 001 (see docs/schema-changes.md).
 
+## Agreed for Phase 4b (Training Management, FR7–FR9)
+
+- Keep GP1's one-plan-per-course model. Migration 002 adds only `courses.sequence_order` and two unique constraints (approved). No `plan_courses` table and no category column; materials are filtered by plan instead of the design's categories.
+- Material = one file (PDF/DOCX/PPTX/MP4) or one web link per course, in `courses.material_url`. Files on local disk, max `MATERIAL_MAX_MB` (100), downloaded only through the API.
+- Any Trainer or Admin may edit any plan or course; `training_plans.created_by` and the audit log record who did what.
+- Deletes are refused when they would erase history: a course with trainee progress or feedback (409 `COURSE_HAS_PROGRESS`), a plan with assignments (409 `PLAN_HAS_ASSIGNMENTS`) or with progress on its courses (409 `PLAN_HAS_PROGRESS`).
+- Assigning a department assigns its active trainees at that moment. Duplicates are skipped. A plan past its due date cannot be assigned (409 `PLAN_PAST_DUE`).
+- Progress is derived, never stored (`services/progress.js`); deactivated trainees are left out of progress views. `plan_assignments.status` is left to Phase 4c.
+- Training Plans and My Trainees are open to Trainers and Admins.
+
 ### Design decisions (these override the screenshots in docs/designs/)
 
 Where the code differs from the design screenshots because of a decision below, follow the decision.
@@ -165,7 +188,7 @@ User Management:
 Sidebar items not yet routed:
 - SOP Library (Admin): keep, with a placeholder page saying it arrives in Phase 5 (FR13).
 - System Health (Admin): keep, with a placeholder page saying it arrives in Phase 8 (reports).
-- My Trainees (Trainer): built in Phase 4b as part of progress monitoring (FR9).
+- My Trainees (Trainer + Admin): built in Phase 4b as `/trainees` (FR9).
 - Achievements and Schedule: removed. They are not in any requirement.
 
 ## Branches
@@ -178,5 +201,5 @@ Resolved in Phase 4a: audit log = audit_logs table; invite flow = option (a), on
 
 - Audit log (FR2): none of the 14 tables is an audit log. Options: add an audit_logs table (documented deviation) or log to a file. Recommendation: add the table.
 - Invite flow (FR1): no email service in scope. Options: (a) admin gets a one-time invite link to copy and send manually, leading to a set-password page (reuses the Reset Password screen); (b) admin sets a temporary password. Recommendation: (a). The users table has no invite or active columns, so (a) needs the pending schema change.
-- Material uploads (FR7): local disk (e.g. backend/uploads/, gitignored) via multer, metadata in the DB. Restrict file types and size.
-- "Groups" for plan assignment (FR8): use departments as groups unless the schema says otherwise.
+- Material uploads (FR7): resolved in Phase 4b — local disk (`backend/uploads/materials/`, gitignored) via multer, with type, size and content checks.
+- "Groups" for plan assignment (FR8): resolved in Phase 4b — departments are the groups.
