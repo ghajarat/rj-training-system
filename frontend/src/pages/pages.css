@@ -263,3 +263,251 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- List pages: toolbar, filters, people, row actions ----------
+   Used by User Management, the Audit Log and the training pages (Phase 4b). */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toolbar__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--font-size-lg);
+}
+
+.toolbar__meta {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.toolbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar__search {
+  width: 260px;
+}
+
+.toolbar__search .field__input {
+  height: 36px;
+}
+
+.icon-toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.icon-toggle:hover,
+.icon-toggle.is-on {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.icon-toggle__count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.filters .field__input {
+  height: 36px;
+}
+
+/* ---------- Users table ---------- */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-cell .avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.user-cell__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.user-cell__email {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.user-cell__you {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+/* Sticky so the gear menu stays reachable when a narrow screen scrolls the table */
+.table__actions {
+  position: sticky;
+  right: 0;
+  width: 48px;
+  background: var(--color-surface);
+  text-align: right;
+}
+
+.table tbody tr:hover .table__actions {
+  background: var(--color-row-hover);
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--color-accent);
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar__controls {
+    width: 100%;
+  }
+
+  .toolbar__search {
+    flex: 1;
+    width: auto;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .user-cell .avatar {
+    display: none;
+  }
+
+  .user-cell__email {
+    word-break: break-all;
+  }
+}
+
+/* ---------- Small shared helpers (Phase 4b) ---------- */
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-danger {
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+/* Name in a table that opens something */
+.table__link {
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.table__link:hover {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+}
+
+/* Second line under a table cell's main text */
+.table__sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* A <button> that looks like a link */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Square icon-only button (e.g. move up / down) */
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stat-card__value--sm {
+  font-size: 18px;
+}

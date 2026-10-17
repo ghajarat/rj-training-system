@@ -1,0 +1,85 @@
+.file-upload__zone {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.file-upload__zone strong {
+  color: var(--color-accent-strong);
+  font-weight: 600;
+}
+
+.file-upload__zone small {
+  font-size: var(--font-size-xs);
+}
+
+.file-upload__zone:hover,
+.file-upload__zone.is-dragging {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.file-upload__zone.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Keyboard users focus the hidden input; show the ring on the visible zone */
+.field:focus-within .file-upload__zone {
+  box-shadow: var(--focus-ring);
+}
+
+.field--error .file-upload__zone {
+  border-color: var(--color-danger);
+}
+
+.file-upload__chosen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.file-upload__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-upload__size {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.file-upload__clear {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.file-upload__clear:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
+}

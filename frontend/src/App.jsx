@@ -6,8 +6,11 @@
 //   per-page `roles`                     enforced by <ProtectedRoute roles={...}>
 //
 // Role homes: Trainee → /dashboard, Trainer → /trainer, Admin → /admin/users
+//
+// Phase 4b (Trainer + Admin): /materials, /plans, /plans/:id, /trainees
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
+import { useAuth } from './auth/useAuth';
 import ProtectedRoute, { RoleHomeRedirect } from './auth/ProtectedRoute';
 import { ROLES } from './auth/roles';
 import AppShell from './layout/AppShell';
@@ -19,8 +22,21 @@ import SetPassword from './pages/SetPassword';
 import UserManagement from './pages/admin/UserManagement';
 import AuditLog from './pages/admin/AuditLog';
 import ComingSoon from './pages/ComingSoon';
+import TrainingMaterials from './pages/training/TrainingMaterials';
+import TrainingPlans from './pages/training/TrainingPlans';
+import PlanDetail from './pages/training/PlanDetail';
+import MyTrainees from './pages/training/MyTrainees';
 
 const { TRAINEE, TRAINER, ADMIN } = ROLES;
+
+// One URL, two screens: trainers and admins manage materials (FR7, Phase 4b);
+// trainees will study them (Phase 4c).
+function MaterialsPage() {
+  const { user } = useAuth();
+  return user.role === TRAINEE
+    ? <ComingSoon title="Training Materials" phase="Phase 4c" />
+    : <TrainingMaterials />;
+}
 
 export default function App() {
   return (
@@ -48,11 +64,14 @@ export default function App() {
                 <Route path="/admin/system-health" element={<ComingSoon title="System Health" phase="Phase 8 · Reports" />} />
               </Route>
 
-              <Route element={<ProtectedRoute roles={[TRAINEE, TRAINER]} />}>
-                <Route path="/materials" element={<ComingSoon title="Training Materials" phase="Phase 4b / 4c" />} />
+              <Route element={<ProtectedRoute roles={[TRAINEE, TRAINER, ADMIN]} />}>
+                <Route path="/materials" element={<MaterialsPage />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={[TRAINER, ADMIN]} />}>
+                <Route path="/plans" element={<TrainingPlans />} />
+                <Route path="/plans/:id" element={<PlanDetail />} />
+                <Route path="/trainees" element={<MyTrainees />} />
                 <Route path="/analytics" element={<ComingSoon title="Analytics & ROI" phase="Phase 7" />} />
                 <Route path="/reports" element={<ComingSoon title="Reports" phase="Phase 8" />} />
               </Route>
