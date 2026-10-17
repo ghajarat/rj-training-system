@@ -7,9 +7,13 @@
 //   admin@rj.com    → Admin    → User Management
 //   trainer@rj.com  → Trainer  → Trainer Overview
 //   trainee@rj.com  → Trainee  → My Dashboard
+//
+// Also creates one pending invitation and one deactivated account so the
+// User Management screen shows every status (Phase 4a), plus audit rows.
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const db = require('./index');
+const { createSetupToken, expirySql, expiresHours } = require('../utils/setupToken');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD || 'RJtraining#2026';
 const BCRYPT_ROUNDS = 12;
@@ -24,7 +28,7 @@ async function main() {
     await client.query('BEGIN');
 
     await client.query(`
-      TRUNCATE notifications, kpis, chat_messages, chat_sessions, embeddings,
+      TRUNCATE audit_logs, notifications, kpis, chat_messages, chat_sessions, embeddings,
                documents, feedback, progress, courses, plan_assignments,
                training_plans, users, departments, roles
       RESTART IDENTITY CASCADE`);
@@ -47,11 +51,14 @@ async function main() {
 
     // ---- Users ---------------------------------------------------------
     const hash = await bcrypt.hash(SEED_PASSWORD, BCRYPT_ROUNDS);
-    const addUser = async (fullName, email, role, dept) => {
+    const addUser = async (fullName, email, role, dept, extra = {}) => {
       const { rows } = await client.query(
-        `INSERT INTO users (role_id, dept_id, full_name, email, password_hash)
-         VALUES ($1, $2, $3, $4, $5) RETURNING user_id`,
-        [roles[role], dept ? depts[dept] : null, fullName, email.toLowerCase(), hash]);
+        `INSERT INTO users (role_id, dept_id, full_name, email, password_hash,
+                            is_active)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id`,
+        [roles[role], dept ? depts[dept] : null, fullName, email.toLowerCase(),
+         extra.passwordHash === undefined ? hash : extra.passwordHash,
+         extra.isActive ?? true]);
       return rows[0].user_id;
     };
 
@@ -60,6 +67,18 @@ async function main() {
     const trainee  = await addUser('Omar Khalil',          'trainee@rj.com',  'Trainee', 'Cabin Crew');
     const trainee2 = await addUser('Lina Saleh',           'trainee2@rj.com', 'Trainee', 'Customer Service');
     const trainee3 = await addUser('Yousef Nasser',        'trainee3@rj.com', 'Trainee', 'Ground Operations');
+
+    // Invited but has not set a password yet (FR1)
+    const invite = createSetupToken();
+    const invited = await addUser('Sami Odeh', 'sami.odeh@rj.com', 'Trainee', 'Cabin Crew',
+      { passwordHash: null });
+    const { rows: [inviteRow] } = await client.query(
+      `UPDATE users SET setup_token_hash = $1, setup_token_expires_at = ${expirySql('$2')}
+        WHERE user_id = $3 RETURNING setup_token_expires_at`,
+      [invite.tokenHash, expiresHours(), invited]);
+    // Deactivated account (FR19) — cannot sign in
+    const former = await addUser('Huda Mansour', 'huda.mansour@rj.com', 'Trainee', 'Customer Service',
+      { isActive: false });
 
     await client.query(
       'UPDATE departments SET manager_id = $1 WHERE dept_id = $2',
@@ -176,6 +195,25 @@ async function main() {
         `INSERT INTO notifications (user_id, message, is_read) VALUES ($1, $2, $3)`, row);
     }
 
+    // ---- Audit log (FR2) ----------------------------------------------
+    const hoursAgo = h => new Date(Date.now() - h * 3600000);
+    const auditRows = [
+      [admin, 'USER_INVITED',     former,   { email: 'huda.mansour@rj.com', role: 'Trainee' }, 24 * 20],
+      [admin, 'USER_DEACTIVATED', former,   {}, 24 * 3],
+      [admin, 'USER_INVITED',     invited,  { email: 'sami.odeh@rj.com', role: 'Trainee' }, 5],
+      [trainee3, 'LOGIN', trainee3, {}, 24 * 2],
+      [trainee2, 'LOGIN', trainee2, {}, 26],
+      [trainer,  'LOGIN', trainer,  {}, 3],
+      [trainee,  'LOGIN', trainee,  {}, 2],
+      [admin,    'LOGIN', admin,    {}, 1],
+    ];
+    for (const [actor, action, target, details, hours] of auditRows) {
+      await client.query(
+        `INSERT INTO audit_logs (actor_id, action, target_user_id, details, created_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [actor, action, target, JSON.stringify(details), hoursAgo(hours)]);
+    }
+
     await client.query('COMMIT');
 
     const counts = await db.query(`
@@ -188,11 +226,15 @@ async function main() {
       SELECT 'progress', COUNT(*) FROM progress UNION ALL
       SELECT 'feedback', COUNT(*) FROM feedback UNION ALL
       SELECT 'kpis', COUNT(*) FROM kpis UNION ALL
-      SELECT 'notifications', COUNT(*) FROM notifications`);
+      SELECT 'notifications', COUNT(*) FROM notifications UNION ALL
+      SELECT 'audit_logs', COUNT(*) FROM audit_logs`);
     console.log('Seed complete:');
     counts.rows.forEach(r => console.log(`  ${r.t.padEnd(18)} ${r.count}`));
     console.log(`\nDemo logins (password: ${SEED_PASSWORD})`);
-    console.log('  admin@rj.com / trainer@rj.com / trainee@rj.com');
+    console.log('  admin@rj.com / trainer@rj.com / trainee@rj.com / trainee2@rj.com / trainee3@rj.com');
+    console.log('  huda.mansour@rj.com is deactivated and cannot sign in.');
+    console.log(`\nDemo invitation for sami.odeh@rj.com (valid until ${inviteRow.setup_token_expires_at.toLocaleString()}):`);
+    console.log(`  ${invite.url}`);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
