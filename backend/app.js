@@ -7,6 +7,8 @@ const HttpError = require('./utils/httpError');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
+const departmentRoutes = require('./routes/departments');
+const auditLogRoutes = require('./routes/auditLogs');
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 // Unknown API route
 app.use('/api', (req, res, next) => {
