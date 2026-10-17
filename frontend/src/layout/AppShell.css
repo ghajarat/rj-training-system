@@ -12,7 +12,7 @@
   flex-direction: column;
   width: var(--sidebar-width);
   background: var(--color-sidebar);
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-on-dark-strong);
 }
 
 .sidebar__brand {
@@ -20,7 +20,7 @@
   align-items: center;
   height: var(--topbar-height);
   padding: 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-on-dark-faint);
 }
 
 .sidebar__nav {
@@ -39,7 +39,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-on-dark-muted);
 }
 
 .sidebar__section ul {
@@ -67,13 +67,13 @@
 }
 
 .sidebar__link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--color-on-dark-faint);
+  color: var(--color-on-dark);
 }
 
 .sidebar__link.is-active {
   background: var(--color-sidebar-active);
-  color: #fff;
+  color: var(--color-on-dark);
 }
 
 .sidebar__link.is-active::before {
@@ -96,8 +96,8 @@
   align-items: center;
   gap: 10px;
   padding: 14px 14px 14px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--color-on-dark-faint);
+  background: var(--color-shade);
 }
 
 .sidebar__user-text {
@@ -110,7 +110,7 @@
 
 .sidebar__user-name {
   overflow: hidden;
-  color: #fff;
+  color: var(--color-on-dark);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -124,7 +124,7 @@
   text-transform: uppercase;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-on-dark-muted);
 }
 
 .sidebar__logout {
@@ -136,13 +136,13 @@
   border: 0;
   border-radius: var(--radius);
   background: transparent;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-on-dark-soft);
   cursor: pointer;
 }
 
 .sidebar__logout:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-on-dark-faint);
+  color: var(--color-on-dark);
 }
 
 /* ---------- Avatars ---------- */
@@ -154,13 +154,13 @@
   flex: none;
   border-radius: 50%;
   background: var(--color-text);
-  color: #fff;
+  color: var(--color-on-dark);
   font-size: 11px;
   font-weight: 600;
 }
 
 .avatar--sidebar {
-  background: #2F4A6B;
+  background: var(--color-avatar-sidebar);
 }
 
 /* ---------- Main column ---------- */
@@ -314,7 +314,7 @@
     position: fixed;
     inset: 0;
     z-index: 25;
-    background: rgba(42, 45, 47, 0.4);
+    background: var(--color-overlay);
   }
 
   .shell__main {

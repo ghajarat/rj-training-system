@@ -167,9 +167,9 @@
   font-weight: 600;
 }
 
-.role-badge--Admin   { background: #ECEDEE; color: var(--color-text); }
-.role-badge--Trainer { background: var(--color-accent-soft); color: #7D6235; }
-.role-badge--Trainee { background: #E7F3EE; color: var(--color-success); }
+.role-badge--Admin   { background: var(--color-neutral-soft); color: var(--color-text); }
+.role-badge--Trainer { background: var(--color-accent-soft); color: var(--color-accent-strong); }
+.role-badge--Trainee { background: var(--color-success-soft); color: var(--color-success); }
 
 .inline-error {
   padding: 12px 14px;
