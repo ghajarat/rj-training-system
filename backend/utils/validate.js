@@ -41,10 +41,44 @@ function likePattern(text) {
   return `%${text.replace(/[\\%_]/g, '\\$&')}%`;
 }
 
+// A real calendar date in YYYY-MM-DD form. The round trip matters:
+// JavaScript quietly turns "2026-02-30" into 2 March, which PostgreSQL
+// would then reject with a 500. Here it is a 400.
 function isDate(value) {
-  return typeof value === 'string' && DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
+  if (typeof value !== 'string' || !DATE_RE.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+// Trimmed text with collapsed spaces, length-checked. `label` is used in the
+// error message, e.g. readText(body.name, 'Course name', { min: 2, max: 150 }).
+function readText(value, label, { min = 1, max }) {
+  const text = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  if (text.length < min || text.length > max) {
+    throw new HttpError(400, 'VALIDATION', min > 1
+      ? `${label} must be between ${min} and ${max} characters.`
+      : `${label} is required and must be at most ${max} characters.`);
+  }
+  return text;
+}
+
+// An absolute http(s) URL. Anything else (javascript:, file:, relative paths)
+// is rejected, because the frontend renders it as a clickable link.
+function readHttpUrl(value, label = 'Link') {
+  const text = typeof value === 'string' ? value.trim() : '';
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
+    throw new HttpError(400, 'VALIDATION', `${label} must be a full web address starting with https://.`);
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || text.length > 500) {
+    throw new HttpError(400, 'VALIDATION', `${label} must be a web address (http or https) of at most 500 characters.`);
+  }
+  return text;
 }
 
 module.exports = {
   EMAIL_RE, isUuid, requireUuid, parsePagination, paginationDto, likePattern, isDate,
+  readText, readHttpUrl,
 };
