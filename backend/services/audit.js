@@ -17,6 +17,16 @@ const ACTIONS = Object.freeze({
   USER_UPDATED: 'USER_UPDATED',
   USER_DEACTIVATED: 'USER_DEACTIVATED',
   USER_REACTIVATED: 'USER_REACTIVATED',
+  // Phase 4b — training management (FR7, FR8). Course and plan ids go in
+  // `details`; target_user_id is only set when a trainee is affected.
+  COURSE_CREATED: 'COURSE_CREATED',
+  COURSE_UPDATED: 'COURSE_UPDATED',
+  COURSE_DELETED: 'COURSE_DELETED',
+  PLAN_CREATED: 'PLAN_CREATED',
+  PLAN_UPDATED: 'PLAN_UPDATED',       // details, or course order
+  PLAN_DELETED: 'PLAN_DELETED',
+  PLAN_ASSIGNED: 'PLAN_ASSIGNED',     // one row per trainee
+  PLAN_UNASSIGNED: 'PLAN_UNASSIGNED',
 });
 
 const ACTION_VALUES = Object.values(ACTIONS);

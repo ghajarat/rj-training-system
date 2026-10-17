@@ -1,13 +1,12 @@
-// /api/departments — fills the department dropdowns on User Management.
-// Admin only for now; Phase 4b can widen this when trainers assign plans
-// to departments (FR8).
+// /api/departments — fills the department dropdowns: User Management (Admin)
+// and the Assign plan window, where a department is a group of trainees (FR8).
 const express = require('express');
 const db = require('../db');
 const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.use(authenticate, authorize('Admin'));
+router.use(authenticate, authorize('Trainer', 'Admin'));
 
 // GET /api/departments  →  { departments: [{ id, name }] }
 router.get('/', async (req, res) => {

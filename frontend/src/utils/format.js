@@ -32,6 +32,38 @@ export function timeAgo(value) {
   return formatDate(value);
 }
 
+// A calendar day from the API ('YYYY-MM-DD', e.g. a plan's due date).
+// Read as a LOCAL date: new Date('2026-12-31') would be UTC midnight, which
+// shows as 30 Dec in any time zone west of UTC.
+export function formatDay(value) {
+  if (!value) return '—';
+  const [y, m, d] = value.split('-').map(Number);
+  return dateFmt.format(new Date(y, m - 1, d));
+}
+
+// Today as 'YYYY-MM-DD' in the user's time zone (default for date inputs).
+export function todayIso() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+// 90 → "1h 30m", 45 → "45m", null → "—"
+export function formatMinutes(minutes) {
+  if (!minutes) return '—';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+// 1536000 → "1.5 MB"
+export function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function plural(count, word, pluralWord = `${word}s`) {
   return `${count} ${count === 1 ? word : pluralWord}`;
 }

@@ -9,6 +9,9 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const departmentRoutes = require('./routes/departments');
 const auditLogRoutes = require('./routes/auditLogs');
+const courseRoutes = require('./routes/courses');
+const planRoutes = require('./routes/plans');
+const traineeRoutes = require('./routes/trainees');
 
 const app = express();
 
@@ -24,6 +27,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/trainees', traineeRoutes);
 
 // Unknown API route
 app.use('/api', (req, res, next) => {

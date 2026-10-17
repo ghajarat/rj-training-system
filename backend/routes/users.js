@@ -31,22 +31,6 @@ router.use(authenticate, authorize('Admin'));
 // Helpers
 // ---------------------------------------------------------------------
 
-// Runs fn(client) inside BEGIN/COMMIT, rolling back on any error.
-async function inTransaction(fn) {
-  const client = await db.getClient();
-  try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
 // Last-admin rule: the system must always keep at least one active admin.
 //
 // Locks every active admin row (FOR UPDATE) before anything else in the
@@ -202,7 +186,7 @@ router.post('/', async (req, res) => {
   }
   const role = readRole(body.role);
 
-  const result = await inTransaction(async (client) => {
+  const result = await db.transaction(async (client) => {
     const dept = await readDepartment(client, body.departmentId ?? null);
 
     const taken = await client.query('SELECT 1 FROM users WHERE email = $1', [email]);
@@ -269,7 +253,7 @@ router.patch('/:id', async (req, res) => {
   const fullName = body.fullName !== undefined ? readFullName(body.fullName) : undefined;
   const role = body.role !== undefined ? readRole(body.role) : undefined;
 
-  const user = await inTransaction(async (client) => {
+  const user = await db.transaction(async (client) => {
     const adminIds = await lockActiveAdminIds(client);
     const current = await lockUser(client, id);
     const dept = body.departmentId !== undefined
@@ -326,7 +310,7 @@ router.patch('/:id', async (req, res) => {
 router.post('/:id/setup-link', async (req, res) => {
   const id = requireUuid(req.params.id, 'user id');
 
-  const result = await inTransaction(async (client) => {
+  const result = await db.transaction(async (client) => {
     const current = await lockUser(client, id);
     if (!current.is_active) {
       throw new HttpError(409, 'USER_INACTIVE', 'This account is deactivated. Reactivate it before sending a link.');
@@ -358,7 +342,7 @@ router.post('/:id/deactivate', async (req, res) => {
     throw new HttpError(409, 'SELF_DEACTIVATE', 'You cannot deactivate your own account.');
   }
 
-  const user = await inTransaction(async (client) => {
+  const user = await db.transaction(async (client) => {
     const adminIds = await lockActiveAdminIds(client);
     const current = await lockUser(client, id);
     if (!current.is_active) {
@@ -388,7 +372,7 @@ router.post('/:id/deactivate', async (req, res) => {
 router.post('/:id/reactivate', async (req, res) => {
   const id = requireUuid(req.params.id, 'user id');
 
-  const user = await inTransaction(async (client) => {
+  const user = await db.transaction(async (client) => {
     const current = await lockUser(client, id);
     if (current.is_active) {
       throw new HttpError(409, 'ALREADY_ACTIVE', 'This account is already active.');

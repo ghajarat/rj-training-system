@@ -36,4 +36,9 @@ module.exports = {
   setup: {
     expiresHours: Number(process.env.INVITE_EXPIRES_HOURS) || 72,
   },
+
+  // FR7: largest training material a trainer may upload, in megabytes.
+  materials: {
+    maxMb: Number(process.env.MATERIAL_MAX_MB) || 100,
+  },
 };

@@ -109,7 +109,9 @@ test('login', async (t) => {
 
 // ---------------------------------------------------------------------
 test('role-based access (NFR07)', async (t) => {
-  for (const url of ['/api/users', '/api/departments', '/api/audit-logs', `/api/users/${RANDOM_UUID}`]) {
+  // /api/departments is also open to Trainers since Phase 4b (assigning a
+  // plan to a department, FR8) — covered in trainingManagement.test.js.
+  for (const url of ['/api/users', '/api/audit-logs', `/api/users/${RANDOM_UUID}`]) {
     await t.test(`no token on ${url} → 401`, async () => {
       const res = await request(app).get(url);
       assert.equal(res.status, 401);
@@ -210,6 +212,8 @@ test('GET /api/departments', async () => {
   const res = await as('admin@rj.com').get('/api/departments');
   assert.equal(res.status, 200);
   assert.equal(res.body.departments.length, 4);
+  assert.equal((await request(app).get('/api/departments')).status, 401);
+  assert.equal((await as('trainee@rj.com').get('/api/departments')).status, 403);
 });
 
 // ---------------------------------------------------------------------
