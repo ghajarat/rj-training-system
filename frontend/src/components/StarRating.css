@@ -1,0 +1,58 @@
+.stars {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.stars__row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stars__option {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.stars:disabled .stars__option {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Keyboard focus lands on the hidden radio; show it on its star. */
+.stars__option:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.stars__icon {
+  color: var(--color-border-strong);
+  transition: color 120ms ease;
+}
+
+.stars__icon.is-on {
+  color: var(--color-accent);
+  fill: currentColor;
+}
+
+.stars__text {
+  margin-left: 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.stars--readonly {
+  display: inline-flex;
+  gap: 1px;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stars__icon {
+    transition: none;
+  }
+}

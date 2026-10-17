@@ -349,6 +349,193 @@
   white-space: normal;
 }
 
+
+/* ---------- Trainee side (Phase 4c) ---------- */
+
+/* Status tabs on Training Materials (design: All courses · 24, My active · 3 ...) */
+.tab-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab-filter__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab-filter__tab:hover {
+  color: var(--color-text);
+}
+
+.tab-filter__tab.is-current {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.tab-filter__tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.tab-filter__count {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Course title opens the course window; looks like a heading */
+.material-card__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.material-card__open:hover {
+  text-decoration: underline;
+}
+
+.material-card__open:focus-visible {
+  outline: none;
+  border-radius: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.material-card__progress {
+  margin-top: 12px;
+}
+
+/* Course window (CourseModal) */
+.course-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.course-modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.course-modal__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.course-modal__note {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-size: var(--font-size-sm);
+}
+
+.course-modal__section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.course-modal__heading {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Progress steps: Started · 25% · 50% · 75% · Completed */
+.step-picker {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.step-picker__step {
+  flex: 1 1 0;
+  min-width: 64px;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.step-picker__step:last-child {
+  border-right: 0;
+}
+
+.step-picker__step:hover:not(:disabled) {
+  background: var(--color-row-hover);
+}
+
+.step-picker__step.is-current {
+  background: var(--color-primary);
+  color: var(--color-on-dark);
+  font-weight: 600;
+}
+
+.step-picker__step:focus-visible {
+  position: relative;
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.step-picker__step:disabled {
+  cursor: wait;
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.feedback-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.feedback-form__saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-success);
+}
+
 @media (max-width: 640px) {
   .filters--materials {
     grid-template-columns: 1fr;
@@ -380,5 +567,15 @@
   .trainee-plan__courses li {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .tab-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .step-picker__step {
+    flex-basis: 30%;
+    border-bottom: 1px solid var(--color-border);
   }
 }

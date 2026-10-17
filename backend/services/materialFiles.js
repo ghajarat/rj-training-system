@@ -13,6 +13,7 @@
 // value, so no extra column is needed.
 const fs = require('fs');
 const path = require('path');
+const HttpError = require('../utils/httpError');
 
 const MATERIALS_DIR = path.join(__dirname, '..', 'uploads', 'materials');
 const STORED_PREFIX = 'upload:';
@@ -98,6 +99,32 @@ async function removePath(filePath) {
   }
 }
 
+// Turns "Fire Fighting / On Board" into a safe download name.
+function downloadName(courseName, ext) {
+  const base = courseName.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'material';
+  return `${base}.${ext}`;
+}
+
+// Sends a course's stored file as a download, or throws a clear 404.
+// Used by GET /api/courses/:id/material (trainers) and
+// GET /api/me/courses/:id/material (trainees); each route checks access first.
+async function sendCourseFile(res, { course_name: courseName, material_url: materialUrl }) {
+  const filePath = pathFor(materialUrl);
+  if (!filePath) {
+    throw new HttpError(404, 'NO_FILE', materialUrl
+      ? 'This course links to a web page, not an uploaded file.'
+      : 'This course has no material yet.');
+  }
+  try {
+    await fs.promises.access(filePath);
+  } catch {
+    throw new HttpError(404, 'FILE_MISSING', 'The file for this course could not be found on the server. It needs to be uploaded again.');
+  }
+  // res.download sets Content-Type from the extension and
+  // Content-Disposition: attachment with the readable name.
+  res.download(filePath, downloadName(courseName, describe(materialUrl).type));
+}
+
 function ensureDir() {
   fs.mkdirSync(MATERIALS_DIR, { recursive: true });
 }
@@ -123,4 +150,5 @@ module.exports = {
   removePath,
   ensureDir,
   removeAllStored,
+  sendCourseFile,
 };

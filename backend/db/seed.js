@@ -184,6 +184,7 @@ async function main() {
     await assign(trainee2, 'Customer Service Excellence', [100, 100, 100]);
     await assign(trainee3, 'Ground Handling Fundamentals', [45, 0]);
     await assign(trainee,  'Aviation Security Refresher', [100, 100]);  // finished on time
+    await assign(trainee,  'Ground Handling Fundamentals', [0, 0]);    // starts 1 Nov: upcoming (Phase 4c)
     await assign(trainee3, 'Aviation Security Refresher', [100, 20]);   // overdue
 
     // ---- Feedback (sentiment_score left NULL for the AI module) -------

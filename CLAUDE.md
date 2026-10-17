@@ -30,6 +30,7 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `db/migrate.js` | Applies `schema.sql`, then each not-yet-run file in `db/migrations/` in its own transaction, recorded in `schema_migrations`. `--reset` drops all tables first; refuses in production. |
 | `db/migrations/001_user_management.sql` | Phase 4a: `users.is_active`, nullable `password_hash`, `setup_token_hash/_expires_at`, `audit_logs` table. Explained in `docs/schema-changes.md`. |
 | `db/migrations/002_training_management.sql` | Phase 4b: `courses.sequence_order` + deferrable `UNIQUE (plan_id, sequence_order)`, `UNIQUE (plan_id, trainee_id)` on `plan_assignments`. A course still belongs to one plan (GP1). |
+| `db/migrations/003_trainee_feedback.sql` | Phase 4c: `UNIQUE (trainee_id, course_id)` on `feedback` (one editable feedback per course). |
 | `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 4 plans with ordered courses (one overdue plan, one demo PDF in `uploads/materials/`, one web link), assignments, progress, feedback, KPIs, notifications, audit rows. Clears old material files. Prints a demo invite link. Refuses in production. |
 | `middleware/auth.js` | `authenticate` (Bearer JWT, then loads current role + `is_active` from the DB every request → `req.user = { id, role, name }`; 401 `ACCOUNT_DEACTIVATED`) and `authorize(...roles)` (403 if role not allowed). |
 | `routes/auth.js` | `POST /api/auth/login` → `{ token, user }` (403 `ACCOUNT_DEACTIVATED`, logs LOGIN / LOGIN_FAILED); `GET /api/auth/me`; public `POST /api/auth/setup/verify` and `POST /api/auth/setup` (one-time invite / reset links). |
@@ -39,17 +40,19 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `routes/courses.js` | FR7, Trainer + Admin. `GET /` (planId, type, search, page), `POST /` (multipart: planId, name, durationMinutes, link, file), `GET/PATCH/DELETE /:id`, `GET /:id/material` (authenticated download). Delete refused (409 `COURSE_HAS_PROGRESS`) once trainees started it. |
 | `routes/plans.js` | FR8/FR9, Trainer + Admin. `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `PUT /:id/order`, `POST /:id/assignments` (`traineeIds` or `departmentId`), `DELETE /:id/assignments/:traineeId`, `GET /:id/progress`. |
 | `routes/trainees.js` | FR8/FR9, Trainer + Admin. `GET /` (search, departmentId, planId → `assignedToPlan`), `GET /:id/progress`. Active trainees only. |
+| `routes/me.js` | FR4–FR6, **Trainee only**. `GET /plans` → `{ summary, plans }` (courses with status, material, my feedback), `GET /courses/:id/material`, `PUT /courses/:id/progress` (`completionPct` 0/25/50/75/100), `PUT /courses/:id/feedback` (`rating` 1–5, `comment` ≤ 2000, stored as written). Trainee is always `req.user.id`; a course outside my plans is 404 `COURSE_NOT_FOUND`; feedback needs a started course (409 `COURSE_NOT_STARTED`). Writes return the refreshed `{ summary, plans }`. |
 | `middleware/uploadMaterial.js` | multer 2 disk upload of one `file` to `uploads/materials/<uuid>.<ext>`: extension, size (`MATERIAL_MAX_MB`) and magic-byte checks; `discardUpload(req)` on failure. |
 | `services/users.js` | `USER_SELECT` (with derived `status` and `last_active_at`), `toUserDto` (the one user shape sent to the frontend; never includes secrets), `findUserById`. |
 | `services/audit.js` | `ACTIONS` and `record(client, { actorId, action, targetUserId, details })` — call with the transaction's client. |
 | `services/materialFiles.js` | Where material files live, `material_url` format (`https://...` or `upload:<uuid>.<ext>`), `describe(url)` → `{ type, label, url }`, safe `pathFor`, `removeStored` (call after COMMIT). |
 | `services/courses.js` | `COURSE_SELECT`, `toCourseDto`, `findCourseById`, `findCoursesByPlan`. |
 | `services/plans.js` | `PLAN_SELECT` (with progress totals), `toPlanDto`, `findPlanById`, `lockPlan` (plan row `FOR UPDATE`; always lock plan before course). |
-| `services/progress.js` | FR9 definitions in one place: `PROGRESS_CTE` (per assignment: completion % = FLOOR of course average, missing progress = 0; last activity; overdue; status), `PLAN_STATS_CTE`, `planProgress`, `traineeProgress`. Reuse for Phase 7. |
+| `services/progress.js` | FR9 definitions in one place: `PROGRESS_CTE` (per assignment: completion % = FLOOR of course average, missing progress = 0; last activity; overdue; status), `PLAN_STATS_CTE`, `planProgress`, `traineeProgress` (`withFeedback` for the trainee), `COURSE_STATUS_SQL` (not_started / started / in_progress / completed), `syncAssignmentStatus` (keeps `plan_assignments.status` in step; called on progress change, course add/delete and assignment). Reuse for Phase 7. |
 | `utils/setupToken.js` | Random one-time token, its SHA-256, the link URL, and `expirySql()` (expiry uses the DB clock). |
 | `utils/validate.js` | `requireUuid`, `parsePagination`, `paginationDto`, `likePattern`, `isDate` (rejects impossible dates like 2026-02-30), `readText`, `readHttpUrl`, `EMAIL_RE`. |
 | `test/userManagement.test.js` | `npm test`: node:test + supertest, Phase 4a. **Re-seeds the dev database.** |
-| `test/trainingManagement.test.js` | Phase 4b (FR7–FR9), runs with `MATERIAL_MAX_MB=1`. Both files together: 118 tests. |
+| `test/trainingManagement.test.js` | Phase 4b (FR7–FR9), runs with `MATERIAL_MAX_MB=1`. |
+| `test/traineeTraining.test.js` | Phase 4c (FR4–FR6): own-data-only access, progress steps, plan completion sync, feedback upsert. All three files: 158 tests. |
 | `uploads/` | Uploaded materials (gitignored). Not served statically. |
 | `services/loginAttempts.js` | In-memory failed-login counter and temporary lock (resets on server restart). |
 | `utils/httpError.js` | `throw new HttpError(status, code, message)` from any route; `app.js` turns it into the JSON error response. |
@@ -74,14 +77,15 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/auth/tokenStorage.js` | JWT in `localStorage` ("Remember this device") or `sessionStorage`, key `rj.token`. |
 | `src/layout/AppShell.jsx` | Signed-in layout: 240px sidebar, top bar (breadcrumb, disabled search, bell, user), `<Outlet />`. Sidebar becomes a drawer under 900px. |
 | `src/layout/navigation.js` | `NAV_SECTIONS` (sidebar items + allowed roles), `navFor(role)`, `titleFor(path)`. Keep in sync with `App.jsx`. |
-| `src/components/` | Shared UI: `Button` (primary/accent/secondary/ghost/danger, sm/md, icon, loading; `btn` classes also work on `<Link>`), `Input` (label, icon, error/hint, password toggle), `Textarea`, `Select`, `FileUpload` (drag-and-drop, type/size check), `ProgressBar` (tones), `Modal` (native `<dialog>`, sizes sm/md/lg), `ConfirmDialog`, `Badge` (tones), `Menu` (row action dropdown), `Pagination`, `Icon` (inline SVG set — add paths to `PATHS`), `BrandMark`. |
+| `src/components/` | Shared UI: `Button` (primary/accent/secondary/ghost/danger, sm/md, icon, loading; `btn` classes also work on `<Link>`), `Input` (label, icon, error/hint, password toggle), `Textarea`, `Select`, `FileUpload` (drag-and-drop, type/size check), `ProgressBar` (tones), `Modal` (native `<dialog>`, sizes sm/md/lg), `ConfirmDialog`, `Badge` (tones), `Menu` (row action dropdown), `Pagination`, `StarRating` (radio-based 1–5 picker or read-only), `Icon` (inline SVG set — add paths to `PATHS`), `BrandMark`. |
 | `src/hooks/` | `useFetch(url, params)` → `{ data, error, loading, reload }` (ignores stale responses; null url = skip); `useDebouncedValue`. |
 | `src/api/admin.js` | User-management and set-password API calls. |
-| `src/api/training.js` | Course (multipart, upload progress, no timeout), material download (blob), plan, reorder and assignment calls. |
+| `src/api/training.js` | Course (multipart, upload progress, no timeout), material download (blob; takes the URL so trainees can reuse it), plan, reorder and assignment calls. |
 | `src/utils/format.js` | `initials`, `formatDate`, `formatDateTime`, `formatDay` (API `YYYY-MM-DD` as a local date), `todayIso`, `formatMinutes`, `formatBytes`, `timeAgo`, `plural`. |
-| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard`, `TrainerOverview` (shells), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
+| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard` (Phase 4c: stats, learning paths, due dates, marked Phase 6 AI slot; `dashboard.css`), `TrainerOverview` (shell), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
 | `src/pages/admin/` | `UserManagement` (+ `InviteUserModal`, `EditUserModal`, `SetupLinkModal`, `UserBadges`, `userOptions`), `AuditLog` (+ `auditLabels`), `admin.css`. |
-| `src/pages/training/` | Phase 4b, Trainer + Admin: `TrainingMaterials` (`/materials`; Trainees get a Phase 4c placeholder), `TrainingPlans` (`/plans`), `PlanDetail` (`/plans/:id`: course order, assign, progress), `MyTrainees` (`/trainees`) + `CourseFormModal`, `PlanFormModal`, `AssignPlanModal`, `TraineeProgressModal`, `trainingOptions`, `training.css`. |
+| `src/pages/training/` | Phase 4b, Trainer + Admin: `TrainingMaterials` (`/materials`; Trainees get `MyMaterials`), `TrainingPlans` (`/plans`), `PlanDetail` (`/plans/:id`: course order, assign, progress), `MyTrainees` (`/trainees`) + `CourseFormModal`, `PlanFormModal`, `AssignPlanModal`, `TraineeProgressModal`, `trainingOptions`, `training.css`. Phase 4c, Trainee: `MyMaterials` (tabs, plan filter, search; `?plan=` / `?course=`), `CourseModal` (open material, progress steps, feedback), `useMyTraining` (+ `flattenCourses`, `nextCourse`). |
+| `src/api/me.js` | Trainee calls: `setProgress`, `saveFeedback`, `downloadMyMaterial`, `PROGRESS_STEPS`. |
 | `src/styles/` | `tokens.css` (design tokens), `global.css`. |
 | `.env.example` | `VITE_API_URL=http://localhost:5000/api` |
 
@@ -168,7 +172,7 @@ Sign-In, Forgot/Reset Password, My Dashboard, AI Assistant, Training Materials, 
 - Any Trainer or Admin may edit any plan or course; `training_plans.created_by` and the audit log record who did what.
 - Deletes are refused when they would erase history: a course with trainee progress or feedback (409 `COURSE_HAS_PROGRESS`), a plan with assignments (409 `PLAN_HAS_ASSIGNMENTS`) or with progress on its courses (409 `PLAN_HAS_PROGRESS`).
 - Assigning a department assigns its active trainees at that moment. Duplicates are skipped. A plan past its due date cannot be assigned (409 `PLAN_PAST_DUE`).
-- Progress is derived, never stored (`services/progress.js`); deactivated trainees are left out of progress views. `plan_assignments.status` is left to Phase 4c.
+- Progress is derived, never stored (`services/progress.js`); deactivated trainees are left out of progress views. `plan_assignments.status` is kept in step by Phase 4c (`syncAssignmentStatus`).
 - Training Plans and My Trainees are open to Trainers and Admins.
 
 ### Design decisions (these override the screenshots in docs/designs/)
@@ -190,6 +194,16 @@ Sidebar items not yet routed:
 - System Health (Admin): keep, with a placeholder page saying it arrives in Phase 8 (reports).
 - My Trainees (Trainer + Admin): built in Phase 4b as `/trainees` (FR9).
 - Achievements and Schedule: removed. They are not in any requirement.
+
+## Agreed for Phase 4c (Training Management for Trainees, FR4–FR6)
+
+- Trainee API lives under `/api/me` (Trainee only). The trainee id always comes from `req.user.id`, never the URL or body. A course outside the trainee's plans answers 404, as if it did not exist.
+- Migration 003 (approved): one feedback per (trainee, course), editable. Changing the comment resets `sentiment_score` to NULL for Phase 7.
+- Progress steps: started 0, in progress 25/50/75, completed 100. Opening a material marks a course started. Moving back is allowed.
+- Feedback opens once a course is started. Upcoming plans (start date ahead) can be opened; overdue plans can still be completed.
+- `plan_assignments.status` is kept in step with progress (`syncAssignmentStatus`), including when a trainer adds or deletes a course.
+- Dashboard cards: overall progress, courses completed, training time completed, next due. Up Next → Upcoming due dates. No Schedule, Achievements or Recent Activity. AI suggestions = empty Phase 6 slot.
+- Seed: Omar (trainee@rj.com) also has Ground Handling Fundamentals, which starts 1 Nov 2026, to demo an upcoming plan. Older seeded progress values (30%, 60%, 45%, 20%) are not on the new steps; the course window shows the exact value.
 
 ## Branches
 

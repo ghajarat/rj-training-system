@@ -504,7 +504,7 @@ test('progress (FR9)', async (t) => {
     const byName = Object.fromEntries(res.body.trainees.map(tr => [tr.fullName, tr]));
     assert.equal(byName['Omar Khalil'].assignedToPlan, true);
     assert.equal(byName['Yousef Nasser'].assignedToPlan, false);
-    assert.equal(byName['Omar Khalil'].planCount, 4);
+    assert.equal(byName['Omar Khalil'].planCount, 5);
 
     const search = await trainer.get('/api/trainees?search=lina');
     assert.deepEqual(search.body.trainees.map(tr => tr.fullName), ['Lina Saleh']);

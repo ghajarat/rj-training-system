@@ -1,7 +1,7 @@
 // Training Materials — Trainer and Admin side (FR7).
 // Design: docs/designs/Training_material.png. That design is the trainee's
 // view (progress, Resume); here the same card grid is used for managing:
-// upload, edit, replace and delete materials. The trainee view is Phase 4c.
+// upload, edit, replace and delete materials. The trainee view is MyMaterials.
 //
 // Every course belongs to one training plan (GP1), so cards show their plan
 // and its due date, and the plan filter replaces the design's categories.
