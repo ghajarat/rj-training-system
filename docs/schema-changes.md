@@ -29,3 +29,38 @@ holds no application data and is not part of the GP1 ER model.
 ### Table count after 001
 
 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.
+
+---
+
+## 002_training_management.sql — Phase 4b (Training Management)
+
+Approved by the team before implementation. The goal was the smallest change
+that makes FR7–FR9 possible, so GP1's model is kept: **a course belongs to
+exactly one plan** (`courses.plan_id`). A link table (`plan_courses`) was
+considered and rejected: it would let one course appear in several plans, but
+no requirement asks for that, and it would have meant dropping a GP1 column.
+The cost of this choice: using the same material in two plans means two
+course rows, each with its own copy of the file and its own progress.
+
+| Change | Why |
+|---|---|
+| `courses.sequence_order INT NOT NULL`, `CHECK (sequence_order >= 1)` | **FR8**: a training plan is an *ordered* list of courses, and GP1 stores no order. Existing rows were numbered alphabetically within each plan. |
+| `UNIQUE (plan_id, sequence_order)` on `courses`, `DEFERRABLE INITIALLY IMMEDIATE` | Two courses cannot share a position. Deferrable because PostgreSQL otherwise checks a unique constraint row by row, and a reorder that swaps positions 1 and 2 in a single `UPDATE` would collide halfway through. Deferred, it is checked once at the end of the statement. |
+| `UNIQUE (plan_id, trainee_id)` on `plan_assignments` | **FR8** says to prevent duplicate assignments. A check in code alone can be beaten by two trainers assigning at the same moment; the constraint cannot. The API uses `INSERT ... ON CONFLICT DO NOTHING` and reports who was already assigned. |
+
+### What is deliberately *not* a schema change
+
+| Need | How it is met with the GP1 columns |
+|---|---|
+| Material type (PDF, DOCX, PPTX, MP4, link) | Derived from `courses.material_url`: `https://...` is a link; `upload:<uuid>.<ext>` is a file in `backend/uploads/materials/`, and its extension is the type. |
+| Plan due date | `training_plans.end_date`. |
+| Completion %, last activity, overdue (**FR9**) | Computed from `progress` in `services/progress.js`: the average of the plan's courses (a course with no progress row counts as 0%), the newest `progress.last_accessed`, and overdue = `end_date` has passed and completion is under 100%. Nothing is stored, so it cannot go stale. |
+| Who created / changed a course | Recorded in `audit_logs` (`COURSE_CREATED`, `COURSE_UPDATED`, ...). Plans already have `training_plans.created_by`. |
+
+`plan_assignments.status` (GP1) is not updated by Phase 4b; the trainee side
+(Phase 4c) owns course completion. The Trainer screens show the derived
+status from `services/progress.js`.
+
+### Table count after 002
+
+Unchanged: 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.

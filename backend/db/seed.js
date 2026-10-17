@@ -10,10 +10,16 @@
 //
 // Also creates one pending invitation and one deactivated account so the
 // User Management screen shows every status (Phase 4a), plus audit rows.
+// Phase 4b: courses are ordered (sequence_order), one links to a web page,
+// one has a small demo PDF in uploads/materials/, and one plan is overdue.
 require('dotenv').config();
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcrypt');
 const db = require('./index');
 const { createSetupToken, expirySql, expiresHours } = require('../utils/setupToken');
+const materialFiles = require('../services/materialFiles');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD || 'RJtraining#2026';
 const BCRYPT_ROUNDS = 12;
@@ -116,6 +122,16 @@ async function main() {
           ['Aircraft Turnaround Coordination', 70],
         ],
       },
+      {
+        // Due date already passed, so the Trainer screens show an overdue trainee (FR9)
+        name: 'Aviation Security Refresher',
+        description: 'Screening awareness, access control, and reporting suspicious activity.',
+        start: '2026-09-01', end: '2026-10-10',
+        courses: [
+          ['AVSEC Awareness', 45],
+          ['Access Control and Reporting', 30],
+        ],
+      },
     ];
 
     const courseIds = {};   // plan name → [course_id, ...]
@@ -127,13 +143,26 @@ async function main() {
         [trainer, p.name, p.description, p.start, p.end]);
       planIds[p.name] = rows[0].plan_id;
       courseIds[p.name] = [];
-      for (const [courseName, minutes] of p.courses) {
+      for (const [index, [courseName, minutes]] of p.courses.entries()) {
         const c = await client.query(
-          `INSERT INTO courses (plan_id, course_name, duration) VALUES ($1, $2, $3) RETURNING course_id`,
-          [rows[0].plan_id, courseName, minutes]);
+          `INSERT INTO courses (plan_id, course_name, duration, sequence_order)
+           VALUES ($1, $2, $3, $4) RETURNING course_id`,
+          [rows[0].plan_id, courseName, minutes, index + 1]);
         courseIds[p.name].push(c.rows[0].course_id);
       }
     }
+
+    // ---- Materials (FR7) ------------------------------------------------
+    // Old files belong to courses the TRUNCATE above just removed.
+    await materialFiles.removeAllStored();
+    materialFiles.ensureDir();
+    const pdfName = `${crypto.randomUUID()}.pdf`;
+    fs.writeFileSync(path.join(materialFiles.MATERIALS_DIR, pdfName),
+      demoPdf('Emergency Evacuation Procedures - demo material'));
+    await client.query('UPDATE courses SET material_url = $1 WHERE course_id = $2',
+      [materialFiles.toMaterialUrl(pdfName), courseIds['Cabin Safety Recurrent 2026'][0]]);
+    await client.query('UPDATE courses SET material_url = $1 WHERE course_id = $2',
+      ['https://www.iata.org/en/publications/dgr/', courseIds['Cabin Safety Recurrent 2026'][3]]);
 
     // ---- Assignments + progress ---------------------------------------
     const assign = async (traineeId, planName, completions) => {
@@ -154,6 +183,8 @@ async function main() {
     await assign(trainee,  'Customer Service Excellence', [30, 0, 0]);
     await assign(trainee2, 'Customer Service Excellence', [100, 100, 100]);
     await assign(trainee3, 'Ground Handling Fundamentals', [45, 0]);
+    await assign(trainee,  'Aviation Security Refresher', [100, 100]);  // finished on time
+    await assign(trainee3, 'Aviation Security Refresher', [100, 20]);   // overdue
 
     // ---- Feedback (sentiment_score left NULL for the AI module) -------
     const cabin = courseIds['Cabin Safety Recurrent 2026'];
@@ -201,6 +232,8 @@ async function main() {
       [admin, 'USER_INVITED',     former,   { email: 'huda.mansour@rj.com', role: 'Trainee' }, 24 * 20],
       [admin, 'USER_DEACTIVATED', former,   {}, 24 * 3],
       [admin, 'USER_INVITED',     invited,  { email: 'sami.odeh@rj.com', role: 'Trainee' }, 5],
+      [trainer, 'PLAN_CREATED',  null,     { planId: planIds['Aviation Security Refresher'], planName: 'Aviation Security Refresher' }, 24 * 40],
+      [trainer, 'PLAN_ASSIGNED', trainee3, { planId: planIds['Aviation Security Refresher'], planName: 'Aviation Security Refresher', via: 'individual' }, 24 * 39],
       [trainee3, 'LOGIN', trainee3, {}, 24 * 2],
       [trainee2, 'LOGIN', trainee2, {}, 26],
       [trainer,  'LOGIN', trainer,  {}, 3],
@@ -241,6 +274,31 @@ async function main() {
   } finally {
     client.release();
   }
+}
+
+// A one-page PDF with a line of text, so the demo has a real file to open.
+// Built by hand (no PDF library): the xref table needs each object's byte
+// offset, which is why the parts are measured as they are joined.
+function demoPdf(text) {
+  const stream = `BT /F1 18 Tf 72 720 Td (${text.replace(/[()\\]/g, '')}) Tj ET`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const offset = pdf.length;
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return offset;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map(o => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf, 'latin1');
 }
 
 main()
