@@ -17,6 +17,11 @@ export const ACTION_INFO = {
   PLAN_DELETED:      { label: 'Deleted plan',       tone: 'danger' },
   PLAN_ASSIGNED:     { label: 'Assigned plan',      tone: 'success' },
   PLAN_UNASSIGNED:   { label: 'Unassigned plan',    tone: 'warning' },
+  // Phase 5 — SOP library (FR13)
+  SOP_UPLOADED:      { label: 'Uploaded SOP',       tone: 'accent' },
+  SOP_UPDATED:       { label: 'Updated SOP',        tone: 'primary' },
+  SOP_REINDEXED:     { label: 'Re-indexed SOP',     tone: 'primary' },
+  SOP_DELETED:       { label: 'Deleted SOP',        tone: 'danger' },
 };
 
 const FIELD_LABELS = {
@@ -63,6 +68,17 @@ export function describeDetails(action, details = {}) {
       return details.planName || '';
     case 'PLAN_ASSIGNED':
       return `${details.planName}${details.department ? ` · via ${details.department}` : ''}`;
+    case 'SOP_UPLOADED':
+      return `${details.title}${details.fileName ? ` · ${details.fileName}` : ''}`;
+    case 'SOP_UPDATED':
+      return [
+        details.previousTitle ? `${details.previousTitle} → ${details.title}` : details.title,
+        details.fileName && `new file ${details.fileName}`,
+      ].filter(Boolean).join(' · ');
+    case 'SOP_REINDEXED':
+      return details.title || '';
+    case 'SOP_DELETED':
+      return `${details.title}${details.chunkCount ? ` · ${details.chunkCount} passages` : ''}`;
     case 'USER_INVITED':
       return `As ${details.role}${details.department ? ` · ${details.department}` : ''}`;
     case 'LOGIN_FAILED':

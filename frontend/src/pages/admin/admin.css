@@ -109,3 +109,30 @@
     display: none;
   }
 }
+
+/* ---------- SOP Library (Phase 5, FR13) ---------- */
+.sop-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.sop-status small {
+  max-width: 340px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.sop-status small.text-danger {
+  color: var(--color-danger);
+}
+
+.sop-upload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
