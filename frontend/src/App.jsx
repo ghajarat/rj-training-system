@@ -8,6 +8,7 @@
 // Role homes: Trainee → /dashboard, Trainer → /trainer, Admin → /admin/users
 //
 // Phase 4b (Trainer + Admin): /materials, /plans, /plans/:id, /trainees
+// Phase 5: /assistant (every role), /admin/sop-library (Admin)
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { useAuth } from './auth/useAuth';
@@ -27,6 +28,8 @@ import TrainingPlans from './pages/training/TrainingPlans';
 import PlanDetail from './pages/training/PlanDetail';
 import MyMaterials from './pages/training/MyMaterials';
 import MyTrainees from './pages/training/MyTrainees';
+import AIAssistant from './pages/assistant/AIAssistant';
+import SopLibrary from './pages/admin/SopLibrary';
 
 const { TRAINEE, TRAINER, ADMIN } = ROLES;
 
@@ -61,12 +64,13 @@ export default function App() {
               <Route element={<ProtectedRoute roles={[ADMIN]} />}>
                 <Route path="/admin/users" element={<UserManagement />} />
                 <Route path="/admin/audit-log" element={<AuditLog />} />
-                <Route path="/admin/sop-library" element={<ComingSoon title="SOP Library" phase="Phase 5 · FR13" />} />
+                <Route path="/admin/sop-library" element={<SopLibrary />} />
                 <Route path="/admin/system-health" element={<ComingSoon title="System Health" phase="Phase 8 · Reports" />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={[TRAINEE, TRAINER, ADMIN]} />}>
                 <Route path="/materials" element={<MaterialsPage />} />
+                <Route path="/assistant" element={<AIAssistant />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={[TRAINER, ADMIN]} />}>
@@ -77,7 +81,6 @@ export default function App() {
                 <Route path="/reports" element={<ComingSoon title="Reports" phase="Phase 8" />} />
               </Route>
 
-              <Route path="/assistant" element={<ComingSoon title="AI Assistant" phase="Phase 5" />} />
               <Route path="/help" element={<ComingSoon title="Help & Resources" />} />
               <Route path="/settings" element={<ComingSoon title="Settings" />} />
             </Route>

@@ -87,3 +87,39 @@ Approved by the team before implementation.
 ### Table count after 003
 
 Unchanged: 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.
+
+---
+
+## 004_chatbot.sql — Phase 5 (AI Chatbot)
+
+Approved by the team before implementation. GP1's `documents`, `embeddings`,
+`chat_sessions` and `chat_messages` tables are kept; each gains only the
+columns the chatbot cannot work without. No table is added.
+
+| Change | Why |
+|---|---|
+| `documents.status` (`processing` / `ready` / `failed`, `CHECK`), `documents.error_message` | **FR13**: an SOP is indexed in the background after upload, because embedding a 20 MB PDF can take longer than an HTTP request should stay open. The admin screen needs to show where each SOP stands, and why it failed (e.g. "scanned PDF, needs OCR"). Status cannot be derived: a document with no chunks could be still processing or have failed. |
+| `documents.embedding_model` | Vectors from two different embedding models cannot be compared. Retrieval only searches documents embedded with the configured model, and the SOP Library flags any that need re-indexing after a model change. The Phase 3 spike hid this in a `#embed=` suffix on `file_url`; it now has a proper column. |
+| `embeddings.chunk_index` (`NOT NULL`, `>= 0`), `UNIQUE (doc_id, chunk_index)` | Order of a chunk inside its document. The unique index also serves "all chunks of a document", so the GP1 index `idx_embeddings_doc` was dropped as redundant. |
+| `embeddings.section`, `embeddings.page` (nullable, `page >= 1`) | **FR11**: a citation shows the heading and PDF page an answer came from. The spike stored the section inside `chunk_text` and parsed it back out; PDFs gave no page at all. DOCX and TXT files have no pages, so `page` is NULL for them. |
+| `chat_messages.citations JSONB NOT NULL DEFAULT '[]'` | **FR11 + FR12**: the history must show each answer with its sources. A JSON snapshot (document id and title, section, page, excerpt, similarity) rather than a link table to `embeddings`, because chunks are replaced when an SOP is re-indexed and deleted with it, and an old answer must keep the sources it was given. This is a documented denormalisation. |
+| `chat_messages.outcome` (`answered` / `not_found` / `refused`, `CHECK`; NULL for user messages) | Whether a bot reply answered from the SOPs, found nothing, or was refused by the safety filter (**NFR18**). Replaces the spike's string match on a fixed sentence, and lets Analytics (Phase 7) count unanswered questions. |
+| `chat_messages.related_course_ids UUID[]` | The 0–3 courses suggested with an answer, so reopening a conversation shows the same side panel. Only ids are stored; names and progress are looked up when the history is read, and deleted courses simply drop out. |
+
+### What is deliberately *not* a schema change
+
+| Need | How it is met without a new column |
+|---|---|
+| Session title | The session's first question, shortened (`services/chatHistory.js`). |
+| Session order and preview | Newest message time and text, from `chat_messages`. |
+| Chunk count, file type | `COUNT(*)` on `embeddings`; the extension in `documents.file_url` (`upload:<uuid>.pdf`). |
+| Vector index | The HNSW cosine index `idx_embeddings_vector` is already in `schema.sql`. |
+| Course ↔ document link for "Related courses" | Not stored: courses are matched to the question by meaning (embedding of "course — plan"), see `services/rag/relatedCourses.js`. |
+
+Rows from before this migration (the Phase 3 spike) are marked `ready` with no
+`embedding_model`, so they stay out of search until re-indexed. `npm run db:seed`
+removes them anyway.
+
+### Table count after 004
+
+Unchanged: 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.

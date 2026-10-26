@@ -27,6 +27,11 @@ const ACTIONS = Object.freeze({
   PLAN_DELETED: 'PLAN_DELETED',
   PLAN_ASSIGNED: 'PLAN_ASSIGNED',     // one row per trainee
   PLAN_UNASSIGNED: 'PLAN_UNASSIGNED',
+  // Phase 5 — SOP library (FR13). Document id and title go in `details`.
+  SOP_UPLOADED: 'SOP_UPLOADED',
+  SOP_UPDATED: 'SOP_UPDATED',         // renamed and/or new file uploaded
+  SOP_REINDEXED: 'SOP_REINDEXED',     // same file indexed again (retry)
+  SOP_DELETED: 'SOP_DELETED',
 });
 
 const ACTION_VALUES = Object.values(ACTIONS);

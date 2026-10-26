@@ -1,0 +1,39 @@
+# Dangerous Goods in Passenger Baggage — Check-in Acceptance
+
+SAMPLE DOCUMENT — FICTIONAL. Written for testing the training system's chatbot. It is not a Royal Jordanian procedure and must not be used operationally.
+
+Document reference: SOP-GH-031 (sample). Revision 1. Owner: Ground Operations Training.
+
+## 1. Purpose
+
+This procedure explains how check-in agents recognise dangerous goods in passenger baggage and decide whether an item may be carried in checked baggage, in cabin baggage, or not at all.
+
+## 2. Asking the dangerous goods question
+
+At every check-in, the agent asks each passenger whether their baggage contains any of the items shown on the dangerous goods poster: for example spare lithium batteries, gas cylinders, flammable liquids, or self-balancing boards. The question must be asked even when the passenger has checked in online.
+
+If the passenger is unsure, the agent asks to see the item before accepting the bag.
+
+## 3. Lithium batteries
+
+Portable electronic devices containing lithium batteries, such as phones, laptops and cameras, may be carried in checked or cabin baggage when they are switched completely off and protected from accidental activation.
+
+Spare lithium batteries and power banks are never accepted in checked baggage. They must be carried in the cabin, with each battery individually protected against short circuit, for example in its retail packaging or with tape over the terminals.
+
+Batteries with a rating of up to 100 Wh need no approval. Batteries between 100 Wh and 160 Wh need approval from the station duty manager, and a passenger may carry no more than two of them. Batteries above 160 Wh are forbidden for passengers.
+
+## 4. Items forbidden in all baggage
+
+The following items must never be accepted in checked or cabin baggage: fireworks and flares, gas-powered hair curlers with loose refills, self-balancing boards and hoverboards, tear gas and pepper spray, and flammable paints or thinners.
+
+If a forbidden item is found, the agent explains why it cannot be carried and offers the passenger the choice of leaving it with someone who is not travelling or surrendering it for disposal. The agent never accepts a bag that still contains a forbidden item.
+
+## 5. Mobility aids
+
+Battery-powered wheelchairs and mobility aids are accepted, but the agent must find out the battery type and follow the mobility aid checklist. For a lithium battery mobility aid, the battery must be removed if the manufacturer allows it, and carried in the cabin.
+
+The agent informs the load control team about every battery-powered mobility aid, so the captain can be notified.
+
+## 6. Reporting
+
+Any dangerous goods found in baggage after acceptance, and any undeclared dangerous goods found by security, must be reported to the station duty manager immediately and recorded on a Dangerous Goods Occurrence Report within 72 hours.
