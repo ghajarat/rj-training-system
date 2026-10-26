@@ -31,6 +31,7 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `db/migrations/001_user_management.sql` | Phase 4a: `users.is_active`, nullable `password_hash`, `setup_token_hash/_expires_at`, `audit_logs` table. Explained in `docs/schema-changes.md`. |
 | `db/migrations/002_training_management.sql` | Phase 4b: `courses.sequence_order` + deferrable `UNIQUE (plan_id, sequence_order)`, `UNIQUE (plan_id, trainee_id)` on `plan_assignments`. A course still belongs to one plan (GP1). |
 | `db/migrations/003_trainee_feedback.sql` | Phase 4c: `UNIQUE (trainee_id, course_id)` on `feedback` (one editable feedback per course). |
+| `db/migrations/004_chatbot.sql` | Phase 5: `documents.status/error_message/embedding_model`, `embeddings.chunk_index/section/page` (+ `UNIQUE (doc_id, chunk_index)`), `chat_messages.citations` (JSONB snapshot), `outcome`, `related_course_ids`. |
 | `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 4 plans with ordered courses (one overdue plan, one demo PDF in `uploads/materials/`, one web link), assignments, progress, feedback, KPIs, notifications, audit rows. Clears old material files. Prints a demo invite link. Refuses in production. |
 | `middleware/auth.js` | `authenticate` (Bearer JWT, then loads current role + `is_active` from the DB every request → `req.user = { id, role, name }`; 401 `ACCOUNT_DEACTIVATED`) and `authorize(...roles)` (403 if role not allowed). |
 | `routes/auth.js` | `POST /api/auth/login` → `{ token, user }` (403 `ACCOUNT_DEACTIVATED`, logs LOGIN / LOGIN_FAILED); `GET /api/auth/me`; public `POST /api/auth/setup/verify` and `POST /api/auth/setup` (one-time invite / reset links). |
@@ -52,13 +53,25 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `utils/validate.js` | `requireUuid`, `parsePagination`, `paginationDto`, `likePattern`, `isDate` (rejects impossible dates like 2026-02-30), `readText`, `readHttpUrl`, `EMAIL_RE`. |
 | `test/userManagement.test.js` | `npm test`: node:test + supertest, Phase 4a. **Re-seeds the dev database.** |
 | `test/trainingManagement.test.js` | Phase 4b (FR7–FR9), runs with `MATERIAL_MAX_MB=1`. |
-| `test/traineeTraining.test.js` | Phase 4c (FR4–FR6): own-data-only access, progress steps, plan completion sync, feedback upsert. All three files: 158 tests. |
+| `test/traineeTraining.test.js` | Phase 4c (FR4–FR6): own-data-only access, progress steps, plan completion sync, feedback upsert. |
+| `test/chatbot.test.js` | Phase 5 API (runs with `AI_FAKE=1`): SOP upload/validation/indexing (TXT, DOCX, PDF pages, scanned/damaged PDF), re-upload, re-index, delete, role access, grounded answers + citations, not-found, refusals, session ownership, rate limit. |
+| `test/chatbotUnits.test.js` | Phase 5 unit tests, no DB: chunker, safety rules, citation mapping, prompt history. All five files: 237 tests. |
+| `test/fixtures/` | `galley-equipment.docx` and `makePdf.js` (builds small text PDFs in memory). |
+| `routes/documents.js` | FR13 SOP library, **Admin**: `GET /`, `POST /` (multipart `file`, `title?` → 202 processing), `GET/PUT/DELETE /:id`, `POST /:id/reindex`. `GET /:id/file` for any signed-in user (opening a citation). 409 `DOCUMENT_EXISTS` (same title), `DOCUMENT_PROCESSING`. |
+| `routes/chat.js` | FR10–FR12, all roles, own sessions only (404 `SESSION_NOT_FOUND` otherwise): `GET/POST /sessions`, `GET /sessions/:id/messages`, `DELETE /sessions/:id`, `POST /sessions/:id/messages` (`text` ≤ 2000) → `{ userMessage, message, citations, relatedCourses, session, timings }`. Per-user rate limit (429 `RATE_LIMITED`). Refusals are normal replies with `outcome: 'refused'`. |
+| `middleware/uploadSop.js` | Like `uploadMaterial.js` for SOPs: PDF/DOCX/TXT, `SOP_MAX_MB`, content check (TXT must be UTF-8 without NUL bytes) → `uploads/sops/`. |
+| `services/sopFiles.js` | SOP files on disk (`file_url` = `upload:<uuid>.<ext>`), `typeOf`, safe `pathFor`, `sendSopFile` (PDF inline). |
+| `services/ai/` | `clients.js` (OpenAI/Anthropic SDK clients, retries with backoff, 503 `AI_NOT_CONFIGURED` / `AI_UNAVAILABLE`), `embeddings.js` (batched ada-002), `moderation.js` (fails open), `llm.js` (`LLM_PROVIDER`/`LLM_MODEL`, default `claude-haiku-5-5`, effort low, handles `refusal`), `fake.js` (`AI_FAKE=1` stand-ins). |
+| `services/rag/` | `extract.js` (pdf-parse pages, mammoth headings), `chunker.js` (section-aware, ~800 tokens, ~100 overlap), `ingest.js` (background queue, one transaction per document, `resumePending` on start), `retrieve.js` (pgvector top-k + similarity floor), `prompt.js` (system prompt, `NOT_IN_SOPS` token, 6-message history), `citations.js` (drop/renumber `[n]`), `safety.js` (rule layer), `relatedCourses.js` (course embeddings cached in memory), `answer.js` (the whole pipeline + per-stage timings). |
+| `services/chatHistory.js` | Sessions (title = first question, derived) and messages, every query scoped to the owner; `saveExchange` writes question + answer in one transaction. |
+| `scripts/ingest-sample-sops.js` | `npm run sop:samples`: loads the three **fictional** SOPs in `samples/sops/`. |
+| `scripts/measure-chat-latency.js` | `npm run chat:latency`: 10 questions through the real pipeline, p50/p95 per stage vs the 5 s target. |
 | `uploads/` | Uploaded materials (gitignored). Not served statically. |
 | `services/loginAttempts.js` | In-memory failed-login counter and temporary lock (resets on server restart). |
 | `utils/httpError.js` | `throw new HttpError(status, code, message)` from any route; `app.js` turns it into the JSON error response. |
 | `utils/jwt.js` | `signToken(userRow)` / `verifyToken(token)` — HS256, issuer `rj-training-system`, payload `{ sub, role, name }`. |
 | `utils/password.js` | `hashPassword` / `verifyPassword` (bcrypt, 12 rounds) with a dummy hash so unknown emails take as long as wrong passwords; `checkPasswordStrength` (10–72 chars, letter + digit). |
-| `.env.example` | `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_ORIGIN` (also the base of invite links), `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `INVITE_EXPIRES_HOURS`, `MATERIAL_MAX_MB`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `SEED_PASSWORD`. |
+| `.env.example` | `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_ORIGIN` (also the base of invite links), `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `INVITE_EXPIRES_HOURS`, `MATERIAL_MAX_MB`, `SEED_PASSWORD`; Phase 5: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `LLM_MODEL`, `LLM_EFFORT`, `EMBEDDING_MODEL`, `MODERATION_MODEL`, `AI_TIMEOUT_MS`, `RAG_TOP_K`, `RAG_MIN_SIMILARITY`, `RAG_CHUNK_TOKENS`, `RAG_CHUNK_OVERLAP_TOKENS`, `SOP_MAX_MB`, `CHAT_RATE_LIMIT_PER_MIN`, `CHAT_LOG_TIMINGS`, `AI_FAKE`. |
 
 Express 5 forwards errors thrown in async handlers to the error handler, so routes `throw` instead of calling `next(err)`.
 
@@ -86,6 +99,9 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/pages/admin/` | `UserManagement` (+ `InviteUserModal`, `EditUserModal`, `SetupLinkModal`, `UserBadges`, `userOptions`), `AuditLog` (+ `auditLabels`), `admin.css`. |
 | `src/pages/training/` | Phase 4b, Trainer + Admin: `TrainingMaterials` (`/materials`; Trainees get `MyMaterials`), `TrainingPlans` (`/plans`), `PlanDetail` (`/plans/:id`: course order, assign, progress), `MyTrainees` (`/trainees`) + `CourseFormModal`, `PlanFormModal`, `AssignPlanModal`, `TraineeProgressModal`, `trainingOptions`, `training.css`. Phase 4c, Trainee: `MyMaterials` (tabs, plan filter, search; `?plan=` / `?course=`), `CourseModal` (open material, progress steps, feedback), `useMyTraining` (+ `flattenCourses`, `nextCourse`). |
 | `src/api/me.js` | Trainee calls: `setProgress`, `saveFeedback`, `downloadMyMaterial`, `PROGRESS_STEPS`. |
+| `src/api/chat.js`, `src/api/documents.js` | Phase 5: chat sessions/messages (60 s timeout); SOP upload/update/re-index/delete and `openDocument` (blob in a new tab). |
+| `src/pages/assistant/` | Phase 5, all roles, `/assistant`: `AIAssistant` (state; a session is created on the first question), `SessionList`, `ChatThread` (bubbles, `[n]` markers, typing indicator, empty state with examples, refused / not-found styles), `Citations`, `Composer` (Enter / Shift+Enter), `AssistantSidePanel` (sources of the last answer, related courses), `sources.js`, `assistant.css`. |
+| `src/pages/admin/SopLibrary.jsx` | Phase 5, Admin, `/admin/sop-library`: table with status badges, polls every 3 s while indexing, `SopUploadModal` (upload, re-upload, rename). |
 | `src/styles/` | `tokens.css` (design tokens), `global.css`. |
 | `.env.example` | `VITE_API_URL=http://localhost:5000/api` |
 
@@ -99,6 +115,8 @@ From `backend/`:
 - `npm run db:migrate` — create any missing tables/indexes (safe to re-run)
 - `npm run db:seed` — wipe all rows and load demo data
 - `npm run db:reset` — drop all tables, migrate, then seed (dev only)
+- `npm run sop:samples` — load the fictional sample SOPs (needs `OPENAI_API_KEY`, or `AI_FAKE=1`)
+- `npm run chat:latency` — time the chatbot per stage (needs the API keys)
 
 From `frontend/`:
 
@@ -190,7 +208,7 @@ User Management:
 - Pending invitations: users with no password yet and an unexpired setup token.
 
 Sidebar items not yet routed:
-- SOP Library (Admin): keep, with a placeholder page saying it arrives in Phase 5 (FR13).
+- SOP Library (Admin): built in Phase 5 as `/admin/sop-library` (FR13).
 - System Health (Admin): keep, with a placeholder page saying it arrives in Phase 8 (reports).
 - My Trainees (Trainer + Admin): built in Phase 4b as `/trainees` (FR9).
 - Achievements and Schedule: removed. They are not in any requirement.
@@ -205,9 +223,20 @@ Sidebar items not yet routed:
 - Dashboard cards: overall progress, courses completed, training time completed, next due. Up Next → Upcoming due dates. No Schedule, Achievements or Recent Activity. AI suggestions = empty Phase 6 slot.
 - Seed: Omar (trainee@rj.com) also has Ground Handling Fundamentals, which starts 1 Nov 2026, to demo an upcoming plan. Older seeded progress values (30%, 60%, 45%, 20%) are not on the new steps; the course window shows the exact value.
 
+## Agreed for Phase 5 (AI Chatbot, FR10–FR13, NFR18)
+
+- Migration 004 (approved): SOP status, chunk section/page/index, citations snapshot, outcome and related course ids on chat messages. No new table. See `docs/schema-changes.md`.
+- Upload answers 202; indexing runs in the API process, one document at a time. Chunks and `ready` are written in one transaction; failures are marked `failed` with a plain reason. A re-indexed SOP keeps answering from its old chunks until the new ones are in.
+- Chat pipeline: rules → (moderation ‖ embed) → pgvector top 5 above a floor (none → "couldn't find", no LLM call) → LLM → citation mapping (an answer citing nothing counts as not found) → output moderation → related courses. Refusals and not-found are saved replies, not errors.
+- LLM default: Anthropic `claude-haiku-5-5`, effort low; switchable with `LLM_PROVIDER`/`LLM_MODEL`. Embeddings: OpenAI `text-embedding-ada-002`.
+- Related courses: by meaning (course "name — plan" embeddings cached in memory), trainees see only their own plans' courses with progress.
+- Any signed-in user may open a cited SOP file. SOP audit actions: `SOP_UPLOADED`, `SOP_UPDATED`, `SOP_REINDEXED`, `SOP_DELETED`.
+- Design differences: no Export button, no "quiz me" tip, no settings gear.
+- `RAG_MIN_SIMILARITY` (0.78 for ada-002) is not yet calibrated with real keys.
+
 ## Branches
 
-- feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored.
+- feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored. Phase 5 (feature/phase5-chatbot) reuses its chunker, prompt and fake mode in `services/rag/` and `services/ai/`.
 
 ## Decisions for Phase 4
 

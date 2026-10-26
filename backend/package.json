@@ -9,7 +9,8 @@
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
     "db:reset": "node db/migrate.js --reset && node db/seed.js",
-    "sop:samples": "node scripts/ingest-sample-sops.js"
+    "sop:samples": "node scripts/ingest-sample-sops.js",
+    "chat:latency": "node scripts/measure-chat-latency.js"
   },
   "keywords": [],
   "author": "",
