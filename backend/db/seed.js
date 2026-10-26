@@ -20,6 +20,7 @@ const bcrypt = require('bcrypt');
 const db = require('./index');
 const { createSetupToken, expirySql, expiresHours } = require('../utils/setupToken');
 const materialFiles = require('../services/materialFiles');
+const sopFiles = require('../services/sopFiles');
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD || 'RJtraining#2026';
 const BCRYPT_ROUNDS = 12;
@@ -155,6 +156,9 @@ async function main() {
     // ---- Materials (FR7) ------------------------------------------------
     // Old files belong to courses the TRUNCATE above just removed.
     await materialFiles.removeAllStored();
+    // Phase 5: SOP files belong to the documents the TRUNCATE removed.
+    // Run `npm run sop:samples` to load the sample SOPs again.
+    await sopFiles.removeAllStored();
     materialFiles.ensureDir();
     const pdfName = `${crypto.randomUUID()}.pdf`;
     fs.writeFileSync(path.join(materialFiles.MATERIALS_DIR, pdfName),

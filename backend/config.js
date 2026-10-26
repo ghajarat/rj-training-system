@@ -41,4 +41,38 @@ module.exports = {
   materials: {
     maxMb: Number(process.env.MATERIAL_MAX_MB) || 100,
   },
+
+  // FR13: largest SOP an admin may upload, in megabytes.
+  sops: {
+    maxMb: Number(process.env.SOP_MAX_MB) || 20,
+  },
+
+  // Phase 5 AI services. Keys are read here and nowhere else, and are never
+  // logged. AI_FAKE=1 swaps every AI call for an offline stand-in (tests,
+  // and team members without API keys).
+  ai: {
+    fake: process.env.AI_FAKE === '1',
+    openaiKey: process.env.OPENAI_API_KEY || '',
+    anthropicKey: process.env.ANTHROPIC_API_KEY || '',
+    embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-ada-002',
+    moderationModel: process.env.MODERATION_MODEL || 'omni-moderation-latest',
+    llmProvider: (process.env.LLM_PROVIDER || 'anthropic').toLowerCase(),
+    llmModel: process.env.LLM_MODEL || '',
+    // One request to an AI service may take this long before it is retried.
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 20000,
+  },
+
+  // FR10 retrieval settings. See services/rag/retrieve.js.
+  rag: {
+    topK: Number(process.env.RAG_TOP_K) || 5,
+    // Empty = pick a floor that suits the embedding model (retrieve.js).
+    minSimilarity: process.env.RAG_MIN_SIMILARITY ? Number(process.env.RAG_MIN_SIMILARITY) : null,
+    chunkTokens: Number(process.env.RAG_CHUNK_TOKENS) || 800,
+    overlapTokens: Number(process.env.RAG_CHUNK_OVERLAP_TOKENS) || 100,
+  },
+
+  chat: {
+    rateLimitPerMinute: Number(process.env.CHAT_RATE_LIMIT_PER_MIN) || 20,
+    logTimings: process.env.CHAT_LOG_TIMINGS !== '0',
+  },
 };
