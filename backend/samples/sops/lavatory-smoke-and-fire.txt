@@ -1,0 +1,42 @@
+# Lavatory Smoke Detection and Fire Response
+
+SAMPLE DOCUMENT — FICTIONAL. Written for testing the training system's chatbot. It is not a Royal Jordanian procedure and must not be used operationally.
+
+Document reference: SOP-CC-022 (sample). Revision 2. Owner: Cabin Services Training.
+
+## 1. Purpose
+
+This procedure tells cabin crew what to do when a lavatory smoke detector activates, or when smoke or fire is found in a lavatory, at any phase of flight. Fire in a lavatory can spread quickly and out of sight, so every activation is treated as a real fire until proven otherwise.
+
+## 2. Lavatory smoke detectors
+
+Every lavatory has a smoke detector in the ceiling. When it detects smoke it sounds a loud horn in the lavatory, a red light flashes on the detector, and the lavatory call light flashes amber at the nearest attendant panel. The cockpit receives a caution message on aircraft fitted with a central alerting system.
+
+Tampering with, disabling or destroying a lavatory smoke detector is prohibited by law. Any passenger found doing so must be reported to the Senior Cabin Crew Member (SCCM), who informs the Captain. The Captain decides whether the authorities are notified on arrival.
+
+## 3. Response to a smoke detector alarm
+
+When a lavatory smoke detector activates during flight, the nearest crew member follows these four steps:
+
+1. Acknowledge the alarm and notify the SCCM immediately, using the interphone emergency call.
+2. Collect the nearest halon (BCF) fire extinguisher and a smoke hood, and bring a second crew member to the lavatory door.
+3. Before opening the door, feel it with the back of the hand from the bottom to the top. If the door is hot, do not open it: keep it closed, inform the SCCM and wait for the fire-fighting team.
+4. If the door is cool, put on the smoke hood, crouch low and open the door slightly, keeping it between you and the lavatory. Look for the source of the smoke.
+
+If a passenger is inside the lavatory, knock firmly, announce "Cabin crew" and ask them to open the door. If there is no answer within a few seconds, unlock the door from outside using the lock override.
+
+## 4. Fighting a lavatory fire
+
+If fire is confirmed, aim the extinguisher at the base of the flames, not at the smoke, and discharge it in short bursts. A waste bin fire is usually inside the bin: discharge the extinguisher through the bin flap. After the fire is out, keep checking the area for at least 10 minutes, because hidden material can reignite.
+
+The SCCM coordinates the fire fight and keeps the Captain informed throughout, at least every two minutes. The Captain decides whether to divert.
+
+## 5. False alarms
+
+Detectors can be set off by aerosol sprays, steam or, more commonly, by a passenger smoking. If the cause is clearly not a fire, reset the detector by pressing the reset button for three seconds, inform the SCCM, and record the event.
+
+Smoking on board is forbidden. A passenger found smoking in a lavatory must be told to stop, the cigarette must be fully extinguished and placed in a wet container, and the event must be reported to the SCCM.
+
+## 6. After the event
+
+Record every activation, real or false, in the Cabin Discrepancy Log before the end of the flight, with the time, the lavatory number and the action taken. A used fire extinguisher must be reported so it is replaced before the next departure. The crew member who handled the event completes a Cabin Safety Report within 24 hours of landing.
