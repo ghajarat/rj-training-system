@@ -92,11 +92,13 @@ async function main() {
       [trainer, depts['Training & Development']]);
 
     // ---- Training plans + courses -------------------------------------
+    // Dates are days from the day of seeding, so the demo always has the same
+    // mix (current, upcoming, past due) and the tests never go stale.
     const plans = [
       {
         name: 'Cabin Safety Recurrent 2026',
         description: 'Annual recurrent training covering emergency procedures, evacuation, and first aid.',
-        start: '2026-10-01', end: '2026-12-31',
+        start: -35, end: 56,
         courses: [
           ['Emergency Evacuation Procedures', 90],
           ['Fire Fighting On Board', 60],
@@ -107,7 +109,7 @@ async function main() {
       {
         name: 'Customer Service Excellence',
         description: 'Service standards, handling disruptions, and communicating with passengers.',
-        start: '2026-10-15', end: '2026-11-30',
+        start: -21, end: 25,
         courses: [
           ['RJ Service Standards', 40],
           ['Managing Flight Disruptions', 50],
@@ -117,7 +119,7 @@ async function main() {
       {
         name: 'Ground Handling Fundamentals',
         description: 'Ramp safety, baggage handling, and turnaround coordination.',
-        start: '2026-11-01', end: '2027-01-31',
+        start: 30, end: 120,
         courses: [
           ['Ramp Safety Essentials', 60],
           ['Aircraft Turnaround Coordination', 70],
@@ -127,7 +129,7 @@ async function main() {
         // Due date already passed, so the Trainer screens show an overdue trainee (FR9)
         name: 'Aviation Security Refresher',
         description: 'Screening awareness, access control, and reporting suspicious activity.',
-        start: '2026-09-01', end: '2026-10-10',
+        start: -65, end: -25,
         courses: [
           ['AVSEC Awareness', 45],
           ['Access Control and Reporting', 30],
@@ -140,7 +142,7 @@ async function main() {
     for (const p of plans) {
       const { rows } = await client.query(
         `INSERT INTO training_plans (created_by, plan_name, description, start_date, end_date)
-         VALUES ($1, $2, $3, $4, $5) RETURNING plan_id`,
+         VALUES ($1, $2, $3, CURRENT_DATE + $4::int, CURRENT_DATE + $5::int) RETURNING plan_id`,
         [trainer, p.name, p.description, p.start, p.end]);
       planIds[p.name] = rows[0].plan_id;
       courseIds[p.name] = [];
@@ -188,7 +190,7 @@ async function main() {
     await assign(trainee2, 'Customer Service Excellence', [100, 100, 100]);
     await assign(trainee3, 'Ground Handling Fundamentals', [45, 0]);
     await assign(trainee,  'Aviation Security Refresher', [100, 100]);  // finished on time
-    await assign(trainee,  'Ground Handling Fundamentals', [0, 0]);    // starts 1 Nov: upcoming (Phase 4c)
+    await assign(trainee,  'Ground Handling Fundamentals', [0, 0]);    // starts in 30 days: upcoming (Phase 4c)
     await assign(trainee3, 'Aviation Security Refresher', [100, 20]);   // overdue
 
     // ---- Feedback (sentiment_score left NULL for the AI module) -------

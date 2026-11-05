@@ -11,7 +11,7 @@
 //                                                    feedback on courses 1 and 2
 //   Customer Service Excellence    30, 0, 0
 //   Aviation Security Refresher    100, 100          finished (due date passed)
-//   Ground Handling Fundamentals   0, 0              starts 1 Nov 2026: upcoming, never opened
+//   Ground Handling Fundamentals   0, 0              starts in 30 days: upcoming, never opened
 // Lina Saleh (trainee2@rj.com) has only Customer Service Excellence, all 100.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');

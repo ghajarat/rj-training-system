@@ -223,7 +223,7 @@ Sidebar items not yet routed:
 - Feedback opens once a course is started. Upcoming plans (start date ahead) can be opened; overdue plans can still be completed.
 - `plan_assignments.status` is kept in step with progress (`syncAssignmentStatus`), including when a trainer adds or deletes a course.
 - Dashboard cards: overall progress, courses completed, training time completed, next due. Up Next → Upcoming due dates. No Schedule, Achievements or Recent Activity. AI suggestions arrived in Phase 6.
-- Seed: Omar (trainee@rj.com) also has Ground Handling Fundamentals, which starts 1 Nov 2026, to demo an upcoming plan. Older seeded progress values (30%, 60%, 45%, 20%) are not on the new steps; the course window shows the exact value.
+- Seed: Omar (trainee@rj.com) also has Ground Handling Fundamentals, which starts 30 days after seeding, to demo an upcoming plan. All seeded plan dates are relative to the day of seeding. Older seeded progress values (30%, 60%, 45%, 20%) are not on the new steps; the course window shows the exact value.
 
 ## Agreed for Phase 5 (AI Chatbot, FR10–FR13, NFR18)
 
