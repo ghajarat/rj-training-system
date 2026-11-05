@@ -33,6 +33,50 @@
   margin-top: 16px;
 }
 
+.ai-slot__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Suggested by your AI Assistant (Phase 6) */
+.suggestion-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.suggestion {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.suggestion:last-child {
+  border-bottom: 0;
+}
+
+.suggestion__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.suggestion__reason {
+  margin: 6px 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.suggestion__note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .dashboard-panel__head {
   display: flex;
   align-items: center;
@@ -162,5 +206,10 @@
 
   .path-row__due {
     display: none;
+  }
+
+  .suggestion {
+    flex-direction: column;
+    gap: 8px;
   }
 }
