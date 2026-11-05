@@ -6,7 +6,8 @@
 //   fakeEmbed(text)    hashing-trick vector: each word and word pair bumps one
 //                      of the 1536 dimensions, so texts sharing words are
 //                      "similar". Crude keyword overlap, but deterministic.
-//   fakeGenerate(...)  quotes the first two sentences of excerpt [1].
+//   fakeGenerate(...)  quotes the first two sentences of excerpt [1], or for
+//                      dashboard suggestions, one fixed reason per item.
 //   fakeModerate(text) flags nothing, except the test marker below.
 const crypto = require('crypto');
 
@@ -32,7 +33,15 @@ function fakeEmbed(text) {
 }
 
 function fakeGenerate(lastUserMessage, notFoundToken) {
-  const m = lastUserMessage.match(/<excerpt id="1"[^>]*>\s*([\s\S]*?)<\/excerpt>/);
+  // Dashboard suggestions (Phase 6) ask for one reason per numbered item.
+  const list = lastUserMessage.match(/<suggestions>([\s\S]*)<\/suggestions>/);
+  if (list) {
+    return JSON.stringify(JSON.parse(list[1]).map(item => ({
+      id: item.id,
+      reason: `Fake AI reason for ${item.course}.`,
+    })));
+  }
+  const m =lastUserMessage.match(/<excerpt id="1"[^>]*>\s*([\s\S]*?)<\/excerpt>/);
   if (!m) return notFoundToken;
   const sentences = m[1].trim().match(/[^.!?]+[.!?]+/g) || [m[1].trim()];
   return `${sentences.slice(0, 2).join(' ').replace(/\s+/g, ' ').trim()} [1]`;
