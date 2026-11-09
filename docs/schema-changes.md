@@ -123,3 +123,20 @@ removes them anyway.
 ### Table count after 004
 
 Unchanged: 14 GP1 tables + `audit_logs` + `schema_migrations` = 16 tables.
+
+## Phase 7 — Trainer Overview, Analytics & ROI (no migration)
+
+Phase 7 needs **no schema change**. It reads the GP1 tables and the columns
+added earlier:
+
+| Need | Where it comes from |
+|---|---|
+| Feedback sentiment | GP1's `feedback.sentiment_score` (FLOAT, "computed by the AI module"), now filled by `services/sentiment.js` on a −1…+1 scale. Migration 003 already resets it to NULL when a comment changes. |
+| Knowledge gaps | `chat_messages.related_course_ids`, `outcome` and `citations` (migration 004). |
+| KPIs before / after | GP1's `kpis` table. Which direction is better, and what one unit is worth, are demo assumptions in `services/roiModel.js`, not columns: they are financial inputs RJ would supply, and the table has no place for them. |
+| Costs, time-to-competency, compliance | Derived from `progress`, `courses.duration`, `plan_assignments.assigned_date` and `training_plans.end_date`. |
+
+Considered and rejected: a `feedback.topic` column for the design's
+"Sentiment by Topic". Sentiment is shown per training plan instead, which
+needs no change and answers the same question for a trainer (which training
+is landing badly).

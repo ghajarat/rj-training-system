@@ -1,0 +1,17 @@
+.stacked-bar {
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-neutral-soft);
+}
+
+.stacked-bar__part {
+  display: block;
+  height: 100%;
+}
+
+.stacked-bar__part--success { background: var(--color-success); }
+.stacked-bar__part--muted   { background: var(--color-border-strong); }
+.stacked-bar__part--danger  { background: var(--color-danger); }
+.stacked-bar__part--primary { background: var(--color-primary); }

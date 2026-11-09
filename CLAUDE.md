@@ -32,7 +32,8 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `db/migrations/002_training_management.sql` | Phase 4b: `courses.sequence_order` + deferrable `UNIQUE (plan_id, sequence_order)`, `UNIQUE (plan_id, trainee_id)` on `plan_assignments`. A course still belongs to one plan (GP1). |
 | `db/migrations/003_trainee_feedback.sql` | Phase 4c: `UNIQUE (trainee_id, course_id)` on `feedback` (one editable feedback per course). |
 | `db/migrations/004_chatbot.sql` | Phase 5: `documents.status/error_message/embedding_model`, `embeddings.chunk_index/section/page` (+ `UNIQUE (doc_id, chunk_index)`), `chat_messages.citations` (JSONB snapshot), `outcome`, `related_course_ids`. |
-| `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 4 plans with ordered courses (one overdue plan, one demo PDF in `uploads/materials/`, one web link), assignments, progress, feedback, KPIs, notifications, audit rows. Clears old material files. Prints a demo invite link. Refuses in production. |
+| `db/seed.js` | Truncates everything, then inserts roles, 4 departments, 7 users (incl. one pending invite and one deactivated), 4 plans with ordered courses (one overdue plan, one demo PDF in `uploads/materials/`, one web link), assignments, progress, feedback, KPIs, notifications, audit rows. Clears old material files. Prints a demo invite link. Refuses in production. Used alone by the tests. |
+| `db/seedDemoCohort.js` | Phase 7, runs after `seed.js` in `npm run db:seed`/`db:reset` (not in tests): **invented** demo cohort from a seeded random generator — 36 trainees (e.g. reem.abbadi@rj.com), the Ramp Operations Safety plan, progress, 67 feedback rows with pre-filled `sentiment_score`, 25 AI Assistant questions linked to courses (knowledge gaps), 3 more KPIs, LOGIN rows. |
 | `middleware/auth.js` | `authenticate` (Bearer JWT, then loads current role + `is_active` from the DB every request → `req.user = { id, role, name }`; 401 `ACCOUNT_DEACTIVATED`) and `authorize(...roles)` (403 if role not allowed). |
 | `routes/auth.js` | `POST /api/auth/login` → `{ token, user }` (403 `ACCOUNT_DEACTIVATED`, logs LOGIN / LOGIN_FAILED); `GET /api/auth/me`; public `POST /api/auth/setup/verify` and `POST /api/auth/setup` (one-time invite / reset links). |
 | `routes/users.js` | Admin only. `GET /` (search, role, departmentId, status, page, pageSize), `POST /` (invite), `GET/PATCH /:id`, `POST /:id/setup-link`, `/:id/deactivate`, `/:id/reactivate`. Self-deactivate, self-role-change and last-active-admin guards. |
@@ -41,6 +42,10 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `routes/courses.js` | FR7, Trainer + Admin. `GET /` (planId, type, search, page), `POST /` (multipart: planId, name, durationMinutes, link, file), `GET/PATCH/DELETE /:id`, `GET /:id/material` (authenticated download). Delete refused (409 `COURSE_HAS_PROGRESS`) once trainees started it. |
 | `routes/plans.js` | FR8/FR9, Trainer + Admin. `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `PUT /:id/order`, `POST /:id/assignments` (`traineeIds` or `departmentId`), `DELETE /:id/assignments/:traineeId`, `GET /:id/progress`. |
 | `routes/trainees.js` | FR8/FR9, Trainer + Admin. `GET /` (search, departmentId, planId → `assignedToPlan`), `GET /:id/progress`. Active trainees only. |
+| `services/sentiment.js` | Phase 7: `scorePending()` scores comments with no `sentiment_score` (-1…1), 20 per LLM call, answers read only as numbers; runs after a feedback save, on server start and every 10 min. `bucketOf` (±0.25). |
+| `services/analytics.js` | Phase 7: `overview()` (cohort, at risk, sentiment, completion by plan, knowledge gaps from chat questions, trainees needing attention) and `roi()` (KPIs, cost, ROI, time-to-competency, compliance, sentiment by plan). Definitions at the top. |
+| `services/roiModel.js` | Phase 7 **demo assumptions**: cost per training hour, platform cost per trainee, 45-day competency target, value per KPI unit and direction. Returned by the API so the page shows the working. |
+| `routes/analytics.js` | Phase 7, Trainer + Admin: `GET /api/analytics/overview`, `GET /api/analytics/roi`. |
 | `services/recommendations.js` | Phase 6: `pickCandidates` (rules choose up to 3 courses), `askForReasons` (LLM words them, 8 s deadline, falls back to rule reasons), in-memory cache per trainee. |
 | `routes/me.js` | FR4–FR6, **Trainee only**. `GET /recommendations` → `{ suggestions, source }` (Phase 6). `GET /plans` → `{ summary, plans }` (courses with status, material, my feedback), `GET /courses/:id/material`, `PUT /courses/:id/progress` (`completionPct` 0/25/50/75/100), `PUT /courses/:id/feedback` (`rating` 1–5, `comment` ≤ 2000, stored as written). Trainee is always `req.user.id`; a course outside my plans is 404 `COURSE_NOT_FOUND`; feedback needs a started course (409 `COURSE_NOT_STARTED`). Writes return the refreshed `{ summary, plans }`. |
 | `middleware/uploadMaterial.js` | multer 2 disk upload of one `file` to `uploads/materials/<uuid>.<ext>`: extension, size (`MATERIAL_MAX_MB`) and magic-byte checks; `discardUpload(req)` on failure. |
@@ -57,7 +62,8 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `test/traineeTraining.test.js` | Phase 4c (FR4–FR6): own-data-only access, progress steps, plan completion sync, feedback upsert. |
 | `test/chatbot.test.js` | Phase 5 API (runs with `AI_FAKE=1`): SOP upload/validation/indexing (TXT, DOCX, PDF pages, scanned/damaged PDF), re-upload, re-index, delete, role access, grounded answers + citations, not-found, refusals, session ownership, rate limit. |
 | `test/chatbotUnits.test.js` | Phase 5 unit tests, no DB: chunker, safety rules, citation mapping, prompt history. |
-| `test/recommendations.test.js` | Phase 6 (runs with `AI_FAKE=1`): candidate rules, parsing the LLM's answer, own-data-only access, fallback to rules, caching. All six files: 253 tests. |
+| `test/recommendations.test.js` | Phase 6 (runs with `AI_FAKE=1`): candidate rules, parsing the LLM's answer, own-data-only access, fallback to rules, caching. |
+| `test/analytics.test.js` | Phase 7 (runs with `AI_FAKE=1`; fake sentiment = word list): role access, cohort numbers, sentiment scoring and failure, knowledge gaps, ROI maths, deactivated users left out. All seven files: 266 tests. |
 | `test/fixtures/` | `galley-equipment.docx` and `makePdf.js` (builds small text PDFs in memory). |
 | `routes/documents.js` | FR13 SOP library, **Admin**: `GET /`, `POST /` (multipart `file`, `title?` → 202 processing), `GET/PUT/DELETE /:id`, `POST /:id/reindex`. `GET /:id/file` for any signed-in user (opening a citation). 409 `DOCUMENT_EXISTS` (same title), `DOCUMENT_PROCESSING`. |
 | `routes/chat.js` | FR10–FR12, all roles, own sessions only (404 `SESSION_NOT_FOUND` otherwise): `GET/POST /sessions`, `GET /sessions/:id/messages`, `DELETE /sessions/:id`, `POST /sessions/:id/messages` (`text` ≤ 2000) → `{ userMessage, message, citations, relatedCourses, session, timings }`. Per-user rate limit (429 `RATE_LIMITED`). Refusals are normal replies with `outcome: 'refused'`. |
@@ -97,12 +103,13 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/api/admin.js` | User-management and set-password API calls. |
 | `src/api/training.js` | Course (multipart, upload progress, no timeout), material download (blob; takes the URL so trainees can reuse it), plan, reorder and assignment calls. |
 | `src/utils/format.js` | `initials`, `formatDate`, `formatDateTime`, `formatDay` (API `YYYY-MM-DD` as a local date), `todayIso`, `formatMinutes`, `formatBytes`, `timeAgo`, `plural`. |
-| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard` (Phase 4c: stats, learning paths, due dates; `dashboard.css`), `AiSuggestions` (Phase 6 dashboard card), `TrainerOverview` (shell), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
+| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard` (Phase 4c: stats, learning paths, due dates; `dashboard.css`), `AiSuggestions` (Phase 6 dashboard card), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
 | `src/pages/admin/` | `UserManagement` (+ `InviteUserModal`, `EditUserModal`, `SetupLinkModal`, `UserBadges`, `userOptions`), `AuditLog` (+ `auditLabels`), `admin.css`. |
 | `src/pages/training/` | Phase 4b, Trainer + Admin: `TrainingMaterials` (`/materials`; Trainees get `MyMaterials`), `TrainingPlans` (`/plans`), `PlanDetail` (`/plans/:id`: course order, assign, progress), `MyTrainees` (`/trainees`) + `CourseFormModal`, `PlanFormModal`, `AssignPlanModal`, `TraineeProgressModal`, `trainingOptions`, `training.css`. Phase 4c, Trainee: `MyMaterials` (tabs, plan filter, search; `?plan=` / `?course=`), `CourseModal` (open material, progress steps, feedback), `useMyTraining` (+ `flattenCourses`, `nextCourse`). |
 | `src/api/me.js` | Trainee calls: `setProgress`, `saveFeedback`, `downloadMyMaterial`, `PROGRESS_STEPS`. |
 | `src/api/chat.js`, `src/api/documents.js` | Phase 5: chat sessions/messages (60 s timeout); SOP upload/update/re-index/delete and `openDocument` (blob in a new tab). |
 | `src/pages/assistant/` | Phase 5, all roles, `/assistant`: `AIAssistant` (state; a session is created on the first question), `SessionList`, `ChatThread` (bubbles, `[n]` markers, typing indicator, empty state with examples, refused / not-found styles), `Citations`, `Composer` (Enter / Shift+Enter), `AssistantSidePanel` (sources of the last answer, related courses), `sources.js`, `assistant.css`. |
+| `src/pages/analytics/` | Phase 7: `TrainerOverview` (`/trainer`, Trainer), `AnalyticsRoi` (`/analytics`, Trainer + Admin), `analytics.css`. Shared components added: `StatCard`, `SentimentGauge` (SVG), `StackedBar`. `utils/format.js` gained `formatMoney`, `formatChange`. |
 | `src/pages/admin/SopLibrary.jsx` | Phase 5, Admin, `/admin/sop-library`: table with status badges, polls every 3 s while indexing, `SopUploadModal` (upload, re-upload, rename). |
 | `src/styles/` | `tokens.css` (design tokens), `global.css`. |
 | `.env.example` | `VITE_API_URL=http://localhost:5000/api` |
@@ -115,8 +122,8 @@ From `backend/`:
 
 - `npm run dev` — API with nodemon on http://localhost:5000 (there is no `start` script)
 - `npm run db:migrate` — create any missing tables/indexes (safe to re-run)
-- `npm run db:seed` — wipe all rows and load demo data
-- `npm run db:reset` — drop all tables, migrate, then seed (dev only)
+- `npm run db:seed` — wipe all rows and load demo data (base seed + Phase 7 demo cohort)
+- `npm run db:reset` — drop all tables, migrate, then seed + demo cohort (dev only)
 - `npm run sop:samples` — load the fictional sample SOPs (needs `OPENAI_API_KEY`, or `AI_FAKE=1`)
 - `npm run chat:latency` — time the chatbot per stage (needs the API keys)
 
@@ -127,7 +134,7 @@ From `frontend/`:
 - `npm run lint` — ESLint
 - `npm run preview` — serve the built `dist/`
 
-From `backend/`, `npm test` runs the API tests (node:test + supertest). It migrates and **re-seeds the database in DATABASE_URL** first, so use it on a dev database only. The frontend has no tests yet.
+From `backend/`, `npm test` runs the API tests (node:test + supertest). It migrates and **re-seeds the database in DATABASE_URL** first, so use it on a dev database only. Tests use the base seed only: run `npm run db:seed` afterwards to get the demo cohort back. The frontend has no tests yet.
 
 ## Database
 
@@ -243,9 +250,17 @@ Sidebar items not yet routed:
 - The LLM only words the reasons. It answers by item number, so it cannot add a course. The answer goes through output moderation; a failure, refusal, wrong shape or 8 s timeout falls back to rule-written reasons, and the card says the AI is unavailable (`source: 'rules'`).
 - No schema change. "Asked about" reuses `chat_messages.related_course_ids`; question text is not sent to the LLM. Reasons are cached in memory until the suggestions, progress or days left change.
 
+## Agreed for Phase 7 (Trainer Overview, Analytics & ROI, sentiment)
+
+- No schema change. Sentiment fills GP1's `feedback.sentiment_score` (-1…1). The LLM scores the comment only (not the stars) in the background; saving feedback never waits; a failure leaves NULL and the next run retries.
+- Everything is computed per request from progress (`PROGRESS_CTE`), feedback, KPIs and chat messages; deactivated users are left out.
+- Design differences: no quizzes in the schema, so Avg. Quiz Score → Avg. Feedback Rating and knowledge gaps come from AI Assistant questions (`related_course_ids`, `outcome`, cited SOP section; counts only, no question text). Sentiment per plan instead of per topic. No previous-quarter comparison, period picker, filters, exports or Cohort report (Phase 8).
+- ROI, cost per trainee and KPI values use stated demo assumptions in `services/roiModel.js`; the Analytics page shows the calculation. Time-to-competency is approximated as assignment date → last activity on a completed plan.
+- Demo data the dashboards need is invented and lives in `db/seedDemoCohort.js`, kept out of the tests.
+
 ## Branches
 
-- feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored. Phase 5 (feature/phase5-chatbot) reuses its chunker, prompt and fake mode in `services/rag/` and `services/ai/`.
+- feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored. Phase 7 is on feature/phase7-analytics, branched from feature/phase6-recommendations (Phase 6 was not yet merged into dev). Phase 5 (feature/phase5-chatbot) reuses its chunker, prompt and fake mode in `services/rag/` and `services/ai/`.
 
 ## Decisions for Phase 4
 

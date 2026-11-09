@@ -85,3 +85,20 @@ export function dueLabel(value) {
   if (days === 1) return 'Due tomorrow';
   return `Due in ${days} days`;
 }
+
+// Whole numbers with thousands separators: 23350 → "23,350"
+const numberFmt = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
+
+// 23350, 'JOD' → "JOD 23,350"; null → "—"
+export function formatMoney(value, currency) {
+  if (value === null || value === undefined) return '—';
+  return `${currency} ${numberFmt.format(value)}`;
+}
+
+// A change with its sign: 12 → "+12%", -42 → "−42%", null → "—"
+export function formatChange(value, unit = '%') {
+  if (value === null || value === undefined) return '—';
+  if (value > 0) return `+${value}${unit}`;
+  if (value < 0) return `−${Math.abs(value)}${unit}`;
+  return `0${unit}`;
+}

@@ -1,0 +1,14 @@
+/* Tones for StatCard; the base .stat-card styles live in pages/pages.css. */
+.stat-card__value--success { color: var(--color-success); }
+.stat-card__value--warning { color: var(--color-warning); }
+.stat-card__value--danger  { color: var(--color-danger); }
+
+.stat-card__foot--success { color: var(--color-success); }
+.stat-card__foot--warning { color: var(--color-warning); }
+.stat-card__foot--danger  { color: var(--color-danger); }
+
+.stat-card__unit {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}

@@ -13,7 +13,7 @@
 //   Aviation Security Refresher    100, 100          finished (due date passed)
 //   Ground Handling Fundamentals   0, 0              starts in 30 days: upcoming, never opened
 // Lina Saleh (trainee2@rj.com) has only Customer Service Excellence, all 100.
-const { test, before, after } = require('node:test');
+const { test, before, after, mock } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
@@ -74,6 +74,11 @@ before(async () => {
 
   app = require('../app');
   db = require('../db');
+  // Phase 7: saving feedback starts sentiment scoring in the background.
+  // Switched off here so these tests read sentiment_score exactly as the
+  // feedback route left it (and never call a real AI service).
+  // test/analytics.test.js covers the scoring.
+  mock.method(require('../services/sentiment'), 'scorePending', async () => 0);
 
   for (const email of ['admin@rj.com', 'trainer@rj.com', 'trainee@rj.com', 'trainee2@rj.com']) {
     const res = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });

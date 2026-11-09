@@ -2,6 +2,9 @@
 const config = require('./config');
 const app = require('./app');
 const ingest = require('./services/rag/ingest');
+const sentiment = require('./services/sentiment');
+
+const SENTIMENT_SWEEP_MS = 10 * 60 * 1000;
 
 // Express 5 hands startup errors (e.g. "port already in use") to this
 // callback instead of throwing. Ignoring `err` made a failed start print
@@ -23,4 +26,10 @@ app.listen(config.port, (err) => {
   ingest.resumePending()
     .then(n => { if (n) console.log(`Resuming indexing of ${n} SOP(s).`); })
     .catch(e => console.error('Could not resume SOP indexing:', e.message));
+
+  // Phase 7: score feedback comments that have no sentiment yet (saved while
+  // the AI was unavailable, or seeded), now and then every 10 minutes.
+  // unref() so this timer never keeps the process alive on its own.
+  sentiment.scorePending();
+  setInterval(() => sentiment.scorePending(), SENTIMENT_SWEEP_MS).unref();
 });
