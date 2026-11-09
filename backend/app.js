@@ -15,6 +15,7 @@ const traineeRoutes = require('./routes/trainees');
 const meRoutes = require('./routes/me');
 const documentRoutes = require('./routes/documents');
 const chatRoutes = require('./routes/chat');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/trainees', traineeRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Unknown API route
 app.use('/api', (req, res, next) => {
