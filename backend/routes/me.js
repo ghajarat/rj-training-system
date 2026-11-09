@@ -20,6 +20,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const materialFiles = require('../services/materialFiles');
 const { traineeProgress, syncAssignmentStatus } = require('../services/progress');
 const { recommendationsFor } = require('../services/recommendations');
+const sentiment = require('../services/sentiment');
 const { requireUuid } = require('../utils/validate');
 
 const router = express.Router();
@@ -197,6 +198,10 @@ router.put('/courses/:id/feedback', async (req, res) => {
                                             THEN NULL ELSE feedback.sentiment_score END`,
       [req.user.id, id, rating, comment]);
   });
+
+  // Phase 7: score the new comment in the background. The response does not
+  // wait for the AI; a failure only leaves sentiment_score NULL until later.
+  if (comment) sentiment.scorePending();
 
   res.json(await myTraining(req.user.id));
 });

@@ -7,7 +7,8 @@
 //                      of the 1536 dimensions, so texts sharing words are
 //                      "similar". Crude keyword overlap, but deterministic.
 //   fakeGenerate(...)  quotes the first two sentences of excerpt [1], or for
-//                      dashboard suggestions, one fixed reason per item.
+//                      dashboard suggestions, one fixed reason per item, or
+//                      for feedback sentiment, a word-list score per comment.
 //   fakeModerate(text) flags nothing, except the test marker below.
 const crypto = require('crypto');
 
@@ -32,7 +33,26 @@ function fakeEmbed(text) {
   return v.map(x => x / norm);
 }
 
+// Phase 7 stand-in for sentiment: (positive words - negative words) / all
+// matched words, so "clear and helpful" → 1, "too rushed" → -1, no match → 0.
+const POSITIVE_WORDS = new Set(('clear helpful helped great good excellent useful realistic practical '
+  + 'engaging well love liked enjoyed recommend best').split(' '));
+const NEGATIVE_WORDS = new Set(('rushed confusing boring long outdated poor bad slow theoretical unclear '
+  + 'difficult hard missing wanted waste').split(' '));
+
+function fakeSentiment(comment) {
+  const words = String(comment).toLowerCase().match(/[a-z]+/g) || [];
+  const pos = words.filter(w => POSITIVE_WORDS.has(w)).length;
+  const neg = words.filter(w => NEGATIVE_WORDS.has(w)).length;
+  return pos + neg === 0 ? 0 : Math.round(((pos - neg) / (pos + neg)) * 100) / 100;
+}
+
 function fakeGenerate(lastUserMessage, notFoundToken) {
+  // Feedback sentiment (Phase 7) asks for one score per numbered comment.
+  const feedback = lastUserMessage.match(/<feedback>([\s\S]*)<\/feedback>/);
+  if (feedback) {
+    return JSON.stringify(JSON.parse(feedback[1]).map(item => ({ id: item.id, score: fakeSentiment(item.comment) })));
+  }
   // Dashboard suggestions (Phase 6) ask for one reason per numbered item.
   const list = lastUserMessage.match(/<suggestions>([\s\S]*)<\/suggestions>/);
   if (list) {
@@ -51,4 +71,4 @@ function fakeModerate(text) {
   return String(text).includes(FAKE_FLAG_MARKER);
 }
 
-module.exports = { fakeEmbed, fakeGenerate, fakeModerate, FAKE_FLAG_MARKER, DIMS };
+module.exports = { fakeEmbed, fakeGenerate, fakeModerate, fakeSentiment, FAKE_FLAG_MARKER, DIMS };
