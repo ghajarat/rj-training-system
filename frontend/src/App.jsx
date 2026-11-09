@@ -9,6 +9,7 @@
 //
 // Phase 4b (Trainer + Admin): /materials, /plans, /plans/:id, /trainees
 // Phase 5: /assistant (every role), /admin/sop-library (Admin)
+// Phase 7: /trainer (Trainer Overview), /analytics (Trainer + Admin)
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { useAuth } from './auth/useAuth';
@@ -18,7 +19,8 @@ import AppShell from './layout/AppShell';
 import SignIn from './pages/SignIn';
 import ForgotPassword from './pages/ForgotPassword';
 import MyDashboard from './pages/MyDashboard';
-import TrainerOverview from './pages/TrainerOverview';
+import TrainerOverview from './pages/analytics/TrainerOverview';
+import AnalyticsRoi from './pages/analytics/AnalyticsRoi';
 import SetPassword from './pages/SetPassword';
 import UserManagement from './pages/admin/UserManagement';
 import AuditLog from './pages/admin/AuditLog';
@@ -77,7 +79,7 @@ export default function App() {
                 <Route path="/plans" element={<TrainingPlans />} />
                 <Route path="/plans/:id" element={<PlanDetail />} />
                 <Route path="/trainees" element={<MyTrainees />} />
-                <Route path="/analytics" element={<ComingSoon title="Analytics & ROI" phase="Phase 7" />} />
+                <Route path="/analytics" element={<AnalyticsRoi />} />
                 <Route path="/reports" element={<ComingSoon title="Reports" phase="Phase 8" />} />
               </Route>
 

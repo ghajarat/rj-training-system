@@ -1,0 +1,40 @@
+.gauge {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.gauge__arc {
+  fill: none;
+  stroke-width: 14;
+}
+
+.gauge__arc--danger  { stroke: var(--color-danger); }
+.gauge__arc--warning { stroke: var(--color-warning); }
+.gauge__arc--success { stroke: var(--color-success); }
+
+.gauge__needle {
+  stroke: var(--color-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.gauge__hub {
+  fill: var(--color-text);
+}
+
+.gauge__value {
+  fill: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.gauge__caption {
+  fill: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

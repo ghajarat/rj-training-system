@@ -1,0 +1,317 @@
+/* Trainer Overview and Analytics & ROI (Phase 7).
+   Designs: docs/designs/Trainer_overview.png, docs/designs/Anaytics.png.
+   Uses .dashboard-grid / .dashboard-panel__head / .link-arrow from dashboard.css. */
+
+.panel__title .toolbar__meta {
+  margin-left: 10px;
+  font-size: var(--font-size-xs);
+}
+
+.panel__note {
+  margin: 12px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* Two equal columns below the main grid */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.analytics-grid > .panel + .panel {
+  margin-top: 0;
+}
+
+/* Completion by Plan */
+.bar-list,
+.gap-list,
+.kpi-list,
+.plan-sentiment {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 1.2fr) 120px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bar-row:last-child {
+  border-bottom: 0;
+}
+
+.bar-row__name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bar-row__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* Feedback Sentiment */
+.sentiment-split {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.sentiment-split strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sentiment-split span {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.sentiment-notes {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.sentiment-notes p {
+  margin: 0 0 6px;
+}
+
+/* Knowledge Gaps */
+.gaps__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gaps__title .toolbar__meta {
+  margin-left: 2px;
+}
+
+.gap-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 84px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gap-row:last-child {
+  border-bottom: 0;
+}
+
+.gap-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gap-row__name {
+  font-weight: 600;
+}
+
+.gap-row__metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.gap-row__metric strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.gap-row__metric span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Analytics & ROI: KPIs before vs after */
+.kpi-legend {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.kpi-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.kpi-swatch--before { background: var(--color-border-strong); }
+.kpi-swatch--after  { background: var(--color-primary); }
+
+.kpi-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kpi-row:last-child {
+  border-bottom: 0;
+}
+
+.kpi-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kpi-row__change {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kpi-bars {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 6px;
+}
+
+.kpi-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-neutral-soft);
+  overflow: hidden;
+}
+
+.kpi-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.kpi-bar--before span { background: var(--color-border-strong); }
+.kpi-bar--after span  { background: var(--color-primary); }
+
+.kpi-row__values {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Analytics & ROI: sentiment by plan */
+.plan-sentiment li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.plan-sentiment li:last-child {
+  border-bottom: 0;
+}
+
+.plan-sentiment__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: var(--font-size-sm);
+}
+
+.plan-sentiment__head span:last-child {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.plan-sentiment__foot {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Analytics & ROI: how ROI is calculated */
+.roi-table td:last-child,
+.roi-table th:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.roi-table .roi-table__total td {
+  font-weight: 700;
+  border-top: 2px solid var(--color-border-strong);
+}
+
+@media (max-width: 1100px) {
+  /* minmax(0, 1fr), not 1fr: a plain 1fr column grows to fit its widest
+     content, which pushed the page wider than a phone screen. */
+  .analytics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .bar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+
+  .bar-row .progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .gap-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .gap-row__metric {
+    align-items: flex-start;
+  }
+
+  .gap-row .badge {
+    justify-self: start;
+  }
+
+  .gaps__title {
+    flex-wrap: wrap;
+  }
+}
+
+/* The ROI panel sits under the grid; its two tables sit side by side. */
+.analytics-roi {
+  margin-top: 16px;
+}
+
+.analytics-grid--flush {
+  margin-top: 12px;
+}
+
+/* Trainee Progress sits in a half-width panel: let the name/plan cell wrap. */
+.table--attention td:first-child {
+  white-space: normal;
+}
