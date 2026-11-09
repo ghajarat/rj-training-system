@@ -145,7 +145,9 @@ test('plans CRUD (FR8)', async (t) => {
     const cabin = res.body.plans.find(p => p.name === 'Cabin Safety Recurrent 2026');
     assert.equal(cabin.courseCount, 4);
     assert.equal(cabin.totalMinutes, 270);
-    assert.equal(cabin.dueDate, '2026-12-31');
+    // The seed sets dates relative to the database's today.
+    const { rows: [due] } = await db.query("SELECT to_char(CURRENT_DATE + 56, 'YYYY-MM-DD') AS date");
+    assert.equal(cabin.dueDate, due.date);
   });
 
   await t.test('search', async () => {

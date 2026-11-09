@@ -1,5 +1,6 @@
 // A trainee's own training (Phase 4c): /api/me on the backend.
-// Reads go through useMyTraining(); these are the writes. Both writes answer
+// Reads go through useMyTraining() and useFetch (GET /me/recommendations, the
+// dashboard's suggestions); these are the writes. Both writes answer
 // with the refreshed { summary, plans }, so the caller can show the new
 // numbers without a second request.
 import api from './client';

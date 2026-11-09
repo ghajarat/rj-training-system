@@ -41,7 +41,8 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `routes/courses.js` | FR7, Trainer + Admin. `GET /` (planId, type, search, page), `POST /` (multipart: planId, name, durationMinutes, link, file), `GET/PATCH/DELETE /:id`, `GET /:id/material` (authenticated download). Delete refused (409 `COURSE_HAS_PROGRESS`) once trainees started it. |
 | `routes/plans.js` | FR8/FR9, Trainer + Admin. `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `PUT /:id/order`, `POST /:id/assignments` (`traineeIds` or `departmentId`), `DELETE /:id/assignments/:traineeId`, `GET /:id/progress`. |
 | `routes/trainees.js` | FR8/FR9, Trainer + Admin. `GET /` (search, departmentId, planId → `assignedToPlan`), `GET /:id/progress`. Active trainees only. |
-| `routes/me.js` | FR4–FR6, **Trainee only**. `GET /plans` → `{ summary, plans }` (courses with status, material, my feedback), `GET /courses/:id/material`, `PUT /courses/:id/progress` (`completionPct` 0/25/50/75/100), `PUT /courses/:id/feedback` (`rating` 1–5, `comment` ≤ 2000, stored as written). Trainee is always `req.user.id`; a course outside my plans is 404 `COURSE_NOT_FOUND`; feedback needs a started course (409 `COURSE_NOT_STARTED`). Writes return the refreshed `{ summary, plans }`. |
+| `services/recommendations.js` | Phase 6: `pickCandidates` (rules choose up to 3 courses), `askForReasons` (LLM words them, 8 s deadline, falls back to rule reasons), in-memory cache per trainee. |
+| `routes/me.js` | FR4–FR6, **Trainee only**. `GET /recommendations` → `{ suggestions, source }` (Phase 6). `GET /plans` → `{ summary, plans }` (courses with status, material, my feedback), `GET /courses/:id/material`, `PUT /courses/:id/progress` (`completionPct` 0/25/50/75/100), `PUT /courses/:id/feedback` (`rating` 1–5, `comment` ≤ 2000, stored as written). Trainee is always `req.user.id`; a course outside my plans is 404 `COURSE_NOT_FOUND`; feedback needs a started course (409 `COURSE_NOT_STARTED`). Writes return the refreshed `{ summary, plans }`. |
 | `middleware/uploadMaterial.js` | multer 2 disk upload of one `file` to `uploads/materials/<uuid>.<ext>`: extension, size (`MATERIAL_MAX_MB`) and magic-byte checks; `discardUpload(req)` on failure. |
 | `services/users.js` | `USER_SELECT` (with derived `status` and `last_active_at`), `toUserDto` (the one user shape sent to the frontend; never includes secrets), `findUserById`. |
 | `services/audit.js` | `ACTIONS` and `record(client, { actorId, action, targetUserId, details })` — call with the transaction's client. |
@@ -55,7 +56,8 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `test/trainingManagement.test.js` | Phase 4b (FR7–FR9), runs with `MATERIAL_MAX_MB=1`. |
 | `test/traineeTraining.test.js` | Phase 4c (FR4–FR6): own-data-only access, progress steps, plan completion sync, feedback upsert. |
 | `test/chatbot.test.js` | Phase 5 API (runs with `AI_FAKE=1`): SOP upload/validation/indexing (TXT, DOCX, PDF pages, scanned/damaged PDF), re-upload, re-index, delete, role access, grounded answers + citations, not-found, refusals, session ownership, rate limit. |
-| `test/chatbotUnits.test.js` | Phase 5 unit tests, no DB: chunker, safety rules, citation mapping, prompt history. All five files: 237 tests. |
+| `test/chatbotUnits.test.js` | Phase 5 unit tests, no DB: chunker, safety rules, citation mapping, prompt history. |
+| `test/recommendations.test.js` | Phase 6 (runs with `AI_FAKE=1`): candidate rules, parsing the LLM's answer, own-data-only access, fallback to rules, caching. All six files: 253 tests. |
 | `test/fixtures/` | `galley-equipment.docx` and `makePdf.js` (builds small text PDFs in memory). |
 | `routes/documents.js` | FR13 SOP library, **Admin**: `GET /`, `POST /` (multipart `file`, `title?` → 202 processing), `GET/PUT/DELETE /:id`, `POST /:id/reindex`. `GET /:id/file` for any signed-in user (opening a citation). 409 `DOCUMENT_EXISTS` (same title), `DOCUMENT_PROCESSING`. |
 | `routes/chat.js` | FR10–FR12, all roles, own sessions only (404 `SESSION_NOT_FOUND` otherwise): `GET/POST /sessions`, `GET /sessions/:id/messages`, `DELETE /sessions/:id`, `POST /sessions/:id/messages` (`text` ≤ 2000) → `{ userMessage, message, citations, relatedCourses, session, timings }`. Per-user rate limit (429 `RATE_LIMITED`). Refusals are normal replies with `outcome: 'refused'`. |
@@ -95,7 +97,7 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/api/admin.js` | User-management and set-password API calls. |
 | `src/api/training.js` | Course (multipart, upload progress, no timeout), material download (blob; takes the URL so trainees can reuse it), plan, reorder and assignment calls. |
 | `src/utils/format.js` | `initials`, `formatDate`, `formatDateTime`, `formatDay` (API `YYYY-MM-DD` as a local date), `todayIso`, `formatMinutes`, `formatBytes`, `timeAgo`, `plural`. |
-| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard` (Phase 4c: stats, learning paths, due dates, marked Phase 6 AI slot; `dashboard.css`), `TrainerOverview` (shell), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
+| `src/pages/` | `SignIn`, `ForgotPassword` (tells users to ask an admin for a reset link), `SetPassword`, `MyDashboard` (Phase 4c: stats, learning paths, due dates; `dashboard.css`), `AiSuggestions` (Phase 6 dashboard card), `TrainerOverview` (shell), `ComingSoon`, `PageHeader`, shared `pages.css` (card, panel, stat-grid, table, empty-state, inline-error/success, modal-form, hide-sm, toolbar, filters, user-cell, table__actions, back-link, table__link/sub, icon-button). |
 | `src/pages/admin/` | `UserManagement` (+ `InviteUserModal`, `EditUserModal`, `SetupLinkModal`, `UserBadges`, `userOptions`), `AuditLog` (+ `auditLabels`), `admin.css`. |
 | `src/pages/training/` | Phase 4b, Trainer + Admin: `TrainingMaterials` (`/materials`; Trainees get `MyMaterials`), `TrainingPlans` (`/plans`), `PlanDetail` (`/plans/:id`: course order, assign, progress), `MyTrainees` (`/trainees`) + `CourseFormModal`, `PlanFormModal`, `AssignPlanModal`, `TraineeProgressModal`, `trainingOptions`, `training.css`. Phase 4c, Trainee: `MyMaterials` (tabs, plan filter, search; `?plan=` / `?course=`), `CourseModal` (open material, progress steps, feedback), `useMyTraining` (+ `flattenCourses`, `nextCourse`). |
 | `src/api/me.js` | Trainee calls: `setProgress`, `saveFeedback`, `downloadMyMaterial`, `PROGRESS_STEPS`. |
@@ -220,8 +222,8 @@ Sidebar items not yet routed:
 - Progress steps: started 0, in progress 25/50/75, completed 100. Opening a material marks a course started. Moving back is allowed.
 - Feedback opens once a course is started. Upcoming plans (start date ahead) can be opened; overdue plans can still be completed.
 - `plan_assignments.status` is kept in step with progress (`syncAssignmentStatus`), including when a trainer adds or deletes a course.
-- Dashboard cards: overall progress, courses completed, training time completed, next due. Up Next → Upcoming due dates. No Schedule, Achievements or Recent Activity. AI suggestions = empty Phase 6 slot.
-- Seed: Omar (trainee@rj.com) also has Ground Handling Fundamentals, which starts 1 Nov 2026, to demo an upcoming plan. Older seeded progress values (30%, 60%, 45%, 20%) are not on the new steps; the course window shows the exact value.
+- Dashboard cards: overall progress, courses completed, training time completed, next due. Up Next → Upcoming due dates. No Schedule, Achievements or Recent Activity. AI suggestions arrived in Phase 6.
+- Seed: Omar (trainee@rj.com) also has Ground Handling Fundamentals, which starts 30 days after seeding, to demo an upcoming plan. All seeded plan dates are relative to the day of seeding. Older seeded progress values (30%, 60%, 45%, 20%) are not on the new steps; the course window shows the exact value.
 
 ## Agreed for Phase 5 (AI Chatbot, FR10–FR13, NFR18)
 
@@ -233,6 +235,13 @@ Sidebar items not yet routed:
 - Any signed-in user may open a cited SOP file. SOP audit actions: `SOP_UPLOADED`, `SOP_UPDATED`, `SOP_REINDEXED`, `SOP_DELETED`.
 - Design differences: no Export button, no "quiz me" tip, no settings gear.
 - `RAG_MIN_SIMILARITY` (0.78 for ada-002) is not yet calibrated with real keys.
+
+## Agreed for Phase 6 (AI suggestions on My Dashboard)
+
+- Scope: the "Suggested by your AI Assistant" card only, for Trainees. Notifications are left for a later phase. The FR id still has to be taken from GP1.
+- Rules choose up to 3 courses from the trainee's own plans: overdue → due within 14 days → already started → related to a chat question in the last 30 days → next in plan. A plan that has not begun offers nothing unless already opened.
+- The LLM only words the reasons. It answers by item number, so it cannot add a course. The answer goes through output moderation; a failure, refusal, wrong shape or 8 s timeout falls back to rule-written reasons, and the card says the AI is unavailable (`source: 'rules'`).
+- No schema change. "Asked about" reuses `chat_messages.related_course_ids`; question text is not sent to the LLM. Reasons are cached in memory until the suggestions, progress or days left change.
 
 ## Branches
 

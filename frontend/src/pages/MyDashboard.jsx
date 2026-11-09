@@ -6,7 +6,7 @@
 //   - "Up Next" (live sessions, not in the schema) becomes Upcoming due dates.
 //   - Schedule, Achievements and Recent Activity are left out (Phase 4a
 //     decision / not in any requirement).
-//   - "Suggested by your AI Assistant" is an empty, clearly marked Phase 6 slot.
+//   - "Suggested by your AI Assistant" is AiSuggestions.jsx (Phase 6).
 // All numbers come from GET /api/me/plans (services/progress.js), the same
 // definitions trainers see on My Trainees.
 import { Link } from 'react-router-dom';
@@ -16,6 +16,7 @@ import Button from '../components/Button';
 import Icon from '../components/Icon';
 import ProgressBar from '../components/ProgressBar';
 import { dueLabel, formatDay, formatMinutes, plural } from '../utils/format';
+import AiSuggestions from './AiSuggestions';
 import PageHeader from './PageHeader';
 import { planStatusFor, toneForStatus } from './training/trainingOptions';
 import useMyTraining, { nextCourse } from './training/useMyTraining';
@@ -162,15 +163,7 @@ export default function MyDashboard() {
         </section>
       </div>
 
-      {/* Phase 6 slot: personalised suggestions from the AI Assistant. Kept empty on purpose. */}
-      <section className="card panel ai-slot" aria-labelledby="ai-title">
-        <h2 id="ai-title" className="panel__title">Suggested by your AI Assistant</h2>
-        <div className="panel__body empty-state">
-          <strong>Personalised recommendations will appear here</strong>
-          <span>Based on your plans and progress, once the AI Assistant is connected.</span>
-          <span className="phase-tag">Phase 6</span>
-        </div>
-      </section>
+      <AiSuggestions />
     </>
   );
 }

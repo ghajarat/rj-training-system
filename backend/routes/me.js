@@ -4,6 +4,7 @@
 //   GET /api/me/courses/:id/material        download a material of my course      FR4
 //   PUT /api/me/courses/:id/progress        { completionPct }                      FR5
 //   PUT /api/me/courses/:id/feedback        { rating, comment? }                   FR6
+//   GET /api/me/recommendations             suggested courses for the dashboard    Phase 6
 //
 // "Only my own data" is structural: the trainee is ALWAYS req.user.id (set by
 // authenticate from the verified token and the database). No route reads a
@@ -18,6 +19,7 @@ const HttpError = require('../utils/httpError');
 const { authenticate, authorize } = require('../middleware/auth');
 const materialFiles = require('../services/materialFiles');
 const { traineeProgress, syncAssignmentStatus } = require('../services/progress');
+const { recommendationsFor } = require('../services/recommendations');
 const { requireUuid } = require('../utils/validate');
 
 const router = express.Router();
@@ -123,6 +125,13 @@ function readComment(value) {
 //                                      status, lastAccessedAt, material, feedback }] }] }
 router.get('/plans', async (req, res) => {
   res.json(await myTraining(req.user.id));
+});
+
+// GET /api/me/recommendations
+//   → { suggestions: [...], source: 'ai' | 'rules' }                       Phase 6
+// Separate from /plans so a slow LLM never holds up the rest of the dashboard.
+router.get('/recommendations', async (req, res) => {
+  res.json(await recommendationsFor(req.user.id));
 });
 
 // GET /api/me/courses/:id/material  →  the file, as a download            FR4
