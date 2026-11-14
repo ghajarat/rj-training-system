@@ -16,7 +16,7 @@ Every line of code here will be questioned at an oral defense. Prefer clear, con
 
 ## Codebase map & commands
 
-Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (CommonJS), pg 8, bcrypt 6, jsonwebtoken 9.
+Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (CommonJS), pg 8, bcrypt 6, jsonwebtoken 9, pdfkit 0.20.
 
 ### Backend (`backend/`)
 
@@ -45,6 +45,10 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `services/sentiment.js` | Phase 7: `scorePending()` scores comments with no `sentiment_score` (-1…1), 20 per LLM call, answers read only as numbers; runs after a feedback save, on server start and every 10 min. `bucketOf` (±0.25). |
 | `services/analytics.js` | Phase 7: `overview()` (cohort, at risk, sentiment, completion by plan, knowledge gaps from chat questions, trainees needing attention) and `roi()` (KPIs, cost, ROI, time-to-competency, compliance, sentiment by plan). Definitions at the top. |
 | `services/roiModel.js` | Phase 7 **demo assumptions**: cost per training hour, platform cost per trainee, 45-day competency target, value per KPI unit and direction. Returned by the API so the page shows the working. |
+| `services/reports.js` | Phase 8 (FR17): five reports (`cohort-progress`, `plan-summary`, `feedback`, `roi`, `ai-usage`), each built into one shape `{ title, filters, summary, sections: [{ columns, rows }], notes }` that the preview, PDF and CSV all read. Filters are checked (ids must exist). Reuses `PROGRESS_CTE` and `analytics.js`. |
+| `services/reportExport.js` | Phase 8: `toPdf` (pdfkit, A4 landscape, RJ colours, repeated table headers, "Page x of y"; built-in Helvetica, so non-Latin text becomes `?`), `toCsv` (UTF-8 BOM, quoting, formula-injection guard), `fileName`. |
+| `routes/reports.js` | Phase 8, Trainer + Admin: `GET /api/reports`, `GET /:id` (preview), `GET /:id/export?format=pdf\|csv` (download, `Cache-Control: no-store`, audit `REPORT_EXPORTED`). |
+| `services/systemHealth.js`, `routes/system.js` | Phase 8, Admin: `GET /api/system/health` → overall + per-check status (database, migrations, SOP index, AI config, sentiment backlog, storage, accounts, server). Read-only, never calls an AI service, never returns secrets. |
 | `routes/analytics.js` | Phase 7, Trainer + Admin: `GET /api/analytics/overview`, `GET /api/analytics/roi`. |
 | `services/recommendations.js` | Phase 6: `pickCandidates` (rules choose up to 3 courses), `askForReasons` (LLM words them, 8 s deadline, falls back to rule reasons), in-memory cache per trainee. |
 | `routes/me.js` | FR4–FR6, **Trainee only**. `GET /recommendations` → `{ suggestions, source }` (Phase 6). `GET /plans` → `{ summary, plans }` (courses with status, material, my feedback), `GET /courses/:id/material`, `PUT /courses/:id/progress` (`completionPct` 0/25/50/75/100), `PUT /courses/:id/feedback` (`rating` 1–5, `comment` ≤ 2000, stored as written). Trainee is always `req.user.id`; a course outside my plans is 404 `COURSE_NOT_FOUND`; feedback needs a started course (409 `COURSE_NOT_STARTED`). Writes return the refreshed `{ summary, plans }`. |
@@ -63,7 +67,8 @@ Versions in use: React 19, Vite 8, react-router-dom 7, axios 1; Express 5 (Commo
 | `test/chatbot.test.js` | Phase 5 API (runs with `AI_FAKE=1`): SOP upload/validation/indexing (TXT, DOCX, PDF pages, scanned/damaged PDF), re-upload, re-index, delete, role access, grounded answers + citations, not-found, refusals, session ownership, rate limit. |
 | `test/chatbotUnits.test.js` | Phase 5 unit tests, no DB: chunker, safety rules, citation mapping, prompt history. |
 | `test/recommendations.test.js` | Phase 6 (runs with `AI_FAKE=1`): candidate rules, parsing the LLM's answer, own-data-only access, fallback to rules, caching. |
-| `test/analytics.test.js` | Phase 7 (runs with `AI_FAKE=1`; fake sentiment = word list): role access, cohort numbers, sentiment scoring and failure, knowledge gaps, ROI maths, deactivated users left out. All seven files: 266 tests. |
+| `test/analytics.test.js` | Phase 7 (runs with `AI_FAKE=1`; fake sentiment = word list): role access, cohort numbers, sentiment scoring and failure, knowledge gaps, ROI maths, deactivated users left out. |
+| `test/reports.test.js` | Phase 8 (runs with `AI_FAKE=1`): role access, every report's shape, filters and their errors, numbers matching the dashboards, no comment/question text, PDF (read back with pdf-parse) and CSV export (BOM, formula-injection guard), audit row, System Health checks and no secrets. All eight files: 288 tests. |
 | `test/fixtures/` | `galley-equipment.docx` and `makePdf.js` (builds small text PDFs in memory). |
 | `routes/documents.js` | FR13 SOP library, **Admin**: `GET /`, `POST /` (multipart `file`, `title?` → 202 processing), `GET/PUT/DELETE /:id`, `POST /:id/reindex`. `GET /:id/file` for any signed-in user (opening a citation). 409 `DOCUMENT_EXISTS` (same title), `DOCUMENT_PROCESSING`. |
 | `routes/chat.js` | FR10–FR12, all roles, own sessions only (404 `SESSION_NOT_FOUND` otherwise): `GET/POST /sessions`, `GET /sessions/:id/messages`, `DELETE /sessions/:id`, `POST /sessions/:id/messages` (`text` ≤ 2000) → `{ userMessage, message, citations, relatedCourses, session, timings }`. Per-user rate limit (429 `RATE_LIMITED`). Refusals are normal replies with `outcome: 'refused'`. |
@@ -110,6 +115,8 @@ Express 5 forwards errors thrown in async handlers to the error handler, so rout
 | `src/api/chat.js`, `src/api/documents.js` | Phase 5: chat sessions/messages (60 s timeout); SOP upload/update/re-index/delete and `openDocument` (blob in a new tab). |
 | `src/pages/assistant/` | Phase 5, all roles, `/assistant`: `AIAssistant` (state; a session is created on the first question), `SessionList`, `ChatThread` (bubbles, `[n]` markers, typing indicator, empty state with examples, refused / not-found styles), `Citations`, `Composer` (Enter / Shift+Enter), `AssistantSidePanel` (sources of the last answer, related courses), `sources.js`, `assistant.css`. |
 | `src/pages/analytics/` | Phase 7: `TrainerOverview` (`/trainer`, Trainer), `AnalyticsRoi` (`/analytics`, Trainer + Admin), `analytics.css`. Shared components added: `StatCard`, `SentimentGauge` (SVG), `StackedBar`. `utils/format.js` gained `formatMoney`, `formatChange`. |
+| `src/pages/reports/` | Phase 8 (FR17), `/reports`, Trainer + Admin: `Reports` (report picker, filters, preview, Export PDF / CSV; report and filters live in the URL, e.g. `?report=roi`), `reportFormat.js`, `reports.css`. `src/api/reports.js` downloads the file. Trainer Overview "Cohort report" and Analytics "Export" link here. |
+| `src/pages/admin/SystemHealth.jsx` | Phase 8, Admin, `/admin/system-health`: one card per health check (+ `systemHealth.css`). |
 | `src/pages/admin/SopLibrary.jsx` | Phase 5, Admin, `/admin/sop-library`: table with status badges, polls every 3 s while indexing, `SopUploadModal` (upload, re-upload, rename). |
 | `src/styles/` | `tokens.css` (design tokens), `global.css`. |
 | `.env.example` | `VITE_API_URL=http://localhost:5000/api` |
@@ -218,7 +225,7 @@ User Management:
 
 Sidebar items not yet routed:
 - SOP Library (Admin): built in Phase 5 as `/admin/sop-library` (FR13).
-- System Health (Admin): keep, with a placeholder page saying it arrives in Phase 8 (reports).
+- System Health (Admin): built in Phase 8 as `/admin/system-health`.
 - My Trainees (Trainer + Admin): built in Phase 4b as `/trainees` (FR9).
 - Achievements and Schedule: removed. They are not in any requirement.
 
@@ -258,9 +265,19 @@ Sidebar items not yet routed:
 - ROI, cost per trainee and KPI values use stated demo assumptions in `services/roiModel.js`; the Analytics page shows the calculation. Time-to-competency is approximated as assignment date → last activity on a completed plan.
 - Demo data the dashboards need is invented and lives in `db/seedDemoCohort.js`, kept out of the tests.
 
+## Agreed for Phase 8 (Reports FR17, System Health)
+
+- FR17 (GP1): admins and trainers generate and export training reports in PDF. Reports page `/reports` for Trainer + Admin; CSV is offered as well for spreadsheets.
+- Five reports: Cohort Progress (plan, department, status filters), Plan Completion Summary, Course Feedback & Sentiment (plan filter), KPI & Training ROI (demo assumptions printed), AI Assistant Usage (from/to, default 30 days, max 366). Same definitions as the dashboards; deactivated users left out.
+- Reports never contain feedback comment text or chat question/answer text, only counts.
+- Every export is audited (`REPORT_EXPORTED`, shown in the Audit Log). Files are built in memory and not kept on the server; responses are `no-store`.
+- PDFs use the built-in Helvetica font: Latin text only (Arabic names would print as `?`). Embedding a Unicode font would fix this.
+- System Health (Admin) is read-only, never calls an AI service and shows only whether keys are set.
+- No schema change in Phase 8. Notifications move to Phase 9. No design screenshots exist for Reports or System Health; both follow the Phase 7 page style.
+
 ## Branches
 
-- feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored. Phase 7 is on feature/phase7-analytics, branched from feature/phase6-recommendations (Phase 6 was not yet merged into dev). Phase 5 (feature/phase5-chatbot) reuses its chunker, prompt and fake mode in `services/rag/` and `services/ai/`.
+- feature/phase3-rag-spike holds the RAG spike (backend/spikes/rag/). It stays on its own branch and is not merged into dev. Its eval output (last-eval.json) is gitignored. Phase 7 is on feature/phase7-analytics, branched from feature/phase6-recommendations (Phase 6 was not yet merged into dev). Phase 8 is on feature/phase8-reports, branched from feature/phase7-analytics. Phase 5 (feature/phase5-chatbot) reuses its chunker, prompt and fake mode in `services/rag/` and `services/ai/`.
 
 ## Decisions for Phase 4
 

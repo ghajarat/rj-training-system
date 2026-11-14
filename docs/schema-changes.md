@@ -140,3 +140,18 @@ Considered and rejected: a `feedback.topic` column for the design's
 "Sentiment by Topic". Sentiment is shown per training plan instead, which
 needs no change and answers the same question for a trainer (which training
 is landing badly).
+
+## Phase 8 — Reports (FR17) and System Health (no migration)
+
+Phase 8 needs **no schema change**. Reports are built on each request from
+the same tables and SQL as the dashboards (`services/progress.js`,
+`services/analytics.js`), so nothing is stored. Each export is written to the
+existing `audit_logs` table with a new action, `REPORT_EXPORTED`; actions are
+checked in code (`services/audit.js`), not by a CHECK constraint, so no
+migration was needed. System Health only reads (`pg_extension`,
+`schema_migrations`, `documents`, `feedback`, `users`, `audit_logs`).
+
+Considered and rejected: a `reports` table keeping generated files. A report
+is cheap to rebuild and always up to date when rebuilt; a stored copy would
+hold personal data that goes stale, and the audit log already records who
+exported what and when.
