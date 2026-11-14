@@ -32,6 +32,8 @@ const ACTIONS = Object.freeze({
   SOP_UPDATED: 'SOP_UPDATED',         // renamed and/or new file uploaded
   SOP_REINDEXED: 'SOP_REINDEXED',     // same file indexed again (retry)
   SOP_DELETED: 'SOP_DELETED',
+  // Phase 8 — reports (FR17). Report id, format and filters go in `details`.
+  REPORT_EXPORTED: 'REPORT_EXPORTED',
 });
 
 const ACTION_VALUES = Object.values(ACTIONS);

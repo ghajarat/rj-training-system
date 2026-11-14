@@ -416,4 +416,9 @@ async function roi() {
   };
 }
 
-module.exports = { overview, roi, gapSeverity, AT_RISK_DAYS, AT_RISK_BELOW_PCT, GAP_WINDOW_DAYS };
+module.exports = {
+  overview, roi, gapSeverity, AT_RISK_DAYS, AT_RISK_BELOW_PCT, GAP_WINDOW_DAYS,
+  // Shared with Phase 8 reports (services/reports.js), so a report and the
+  // dashboards always use the same sentiment definitions.
+  ACTIVE_FEEDBACK, SENTIMENT_COUNTS, SENTIMENT_PARAMS, toSentimentDto, round1,
+};

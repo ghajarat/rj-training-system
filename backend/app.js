@@ -16,11 +16,15 @@ const meRoutes = require('./routes/me');
 const documentRoutes = require('./routes/documents');
 const chatRoutes = require('./routes/chat');
 const analyticsRoutes = require('./routes/analytics');
+const reportRoutes = require('./routes/reports');
+const systemRoutes = require('./routes/system');
 
 const app = express();
 
 app.disable('x-powered-by');
-app.use(cors({ origin: config.clientOrigin }));
+// Content-Disposition is exposed so the frontend can read a download's file
+// name (Phase 8 report exports); browsers hide it from cross-origin JS otherwise.
+app.use(cors({ origin: config.clientOrigin, exposedHeaders: ['Content-Disposition'] }));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (req, res) => {
@@ -38,6 +42,8 @@ app.use('/api/me', meRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/system', systemRoutes);
 
 // Unknown API route
 app.use('/api', (req, res, next) => {
