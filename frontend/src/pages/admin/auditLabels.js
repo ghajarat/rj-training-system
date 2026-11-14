@@ -22,6 +22,8 @@ export const ACTION_INFO = {
   SOP_UPDATED:       { label: 'Updated SOP',        tone: 'primary' },
   SOP_REINDEXED:     { label: 'Re-indexed SOP',     tone: 'primary' },
   SOP_DELETED:       { label: 'Deleted SOP',        tone: 'danger' },
+  // Phase 8 — reports (FR17)
+  REPORT_EXPORTED:   { label: 'Exported report',    tone: 'neutral' },
 };
 
 const FIELD_LABELS = {
@@ -79,6 +81,12 @@ export function describeDetails(action, details = {}) {
       return details.title || '';
     case 'SOP_DELETED':
       return `${details.title}${details.chunkCount ? ` · ${details.chunkCount} passages` : ''}`;
+    case 'REPORT_EXPORTED':
+      return [
+        details.title,
+        details.format && details.format.toUpperCase(),
+        ...(details.filters || []).map(f => `${f.label}: ${f.value}`),
+      ].filter(Boolean).join(' · ');
     case 'USER_INVITED':
       return `As ${details.role}${details.department ? ` · ${details.department}` : ''}`;
     case 'LOGIN_FAILED':

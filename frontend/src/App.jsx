@@ -32,6 +32,8 @@ import MyMaterials from './pages/training/MyMaterials';
 import MyTrainees from './pages/training/MyTrainees';
 import AIAssistant from './pages/assistant/AIAssistant';
 import SopLibrary from './pages/admin/SopLibrary';
+import SystemHealth from './pages/admin/SystemHealth';
+import Reports from './pages/reports/Reports';
 
 const { TRAINEE, TRAINER, ADMIN } = ROLES;
 
@@ -67,7 +69,7 @@ export default function App() {
                 <Route path="/admin/users" element={<UserManagement />} />
                 <Route path="/admin/audit-log" element={<AuditLog />} />
                 <Route path="/admin/sop-library" element={<SopLibrary />} />
-                <Route path="/admin/system-health" element={<ComingSoon title="System Health" phase="Phase 8 · Reports" />} />
+                <Route path="/admin/system-health" element={<SystemHealth />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={[TRAINEE, TRAINER, ADMIN]} />}>
@@ -80,7 +82,7 @@ export default function App() {
                 <Route path="/plans/:id" element={<PlanDetail />} />
                 <Route path="/trainees" element={<MyTrainees />} />
                 <Route path="/analytics" element={<AnalyticsRoi />} />
-                <Route path="/reports" element={<ComingSoon title="Reports" phase="Phase 8" />} />
+                <Route path="/reports" element={<Reports />} />
               </Route>
 
               <Route path="/help" element={<ComingSoon title="Help & Resources" />} />

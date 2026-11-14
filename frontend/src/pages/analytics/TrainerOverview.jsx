@@ -5,7 +5,7 @@
 //     of quiz misses (services/analytics.js explains how).
 //   - Completion by Program shows the current completion only: progress has
 //     no history, so there is no "previous quarter" to compare with.
-//   - No "Cohort report" button: reports are Phase 8.
+//   - "Cohort report" opens the Cohort Progress report (Phase 8, FR17).
 // All numbers come from GET /api/analytics/overview.
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
@@ -47,10 +47,16 @@ export default function TrainerOverview() {
         title={`Welcome back, ${user.fullName.split(' ')[0]}.`}
         subtitle={data ? subtitleFor(s, data.plans) : 'Loading cohort health…'}
         actions={(
-          <Link to="/plans" className="btn btn--primary">
-            <Icon name="plus" size={16} />
-            <span>Assign a plan</span>
-          </Link>
+          <>
+            <Link to="/reports?report=cohort-progress" className="btn btn--secondary">
+              <Icon name="file" size={16} />
+              <span>Cohort report</span>
+            </Link>
+            <Link to="/plans" className="btn btn--primary">
+              <Icon name="plus" size={16} />
+              <span>Assign a plan</span>
+            </Link>
+          </>
         )}
       />
 

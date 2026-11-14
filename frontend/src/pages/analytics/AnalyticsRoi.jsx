@@ -2,13 +2,16 @@
 // Design: docs/designs/Anaytics.png, with these differences:
 //   - Sentiment is shown per training plan, not per topic: feedback has no
 //     topic, and adding one would be a schema change for little gain.
-//   - No period picker, filters or Export PDF/XLS: the KPIs have no dates
-//     (GP1 Table 28) and exports belong to Phase 8 (Reports).
+//   - No period picker or filters: the KPIs have no dates (GP1 Table 28).
+//   - "Export" opens the KPI & Training ROI report (Phase 8, FR17), which
+//     downloads as PDF or CSV.
 //   - The money figures use stated demo assumptions (backend
 //     services/roiModel.js). The "How ROI is calculated" panel shows them so
 //     every number on this page can be traced back.
 // All numbers come from GET /api/analytics/roi.
+import { Link } from 'react-router-dom';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import StackedBar from '../../components/StackedBar';
 import StatCard from '../../components/StatCard';
 import useFetch from '../../hooks/useFetch';
@@ -30,6 +33,12 @@ export default function AnalyticsRoi() {
         eyebrow="Training impact"
         title="Training Analytics & ROI"
         subtitle="The business impact of structured learning across the organisation."
+        actions={(
+          <Link to="/reports?report=roi" className="btn btn--secondary">
+            <Icon name="download" size={16} />
+            <span>Export</span>
+          </Link>
+        )}
       />
 
       {error && (

@@ -1,0 +1,169 @@
+/* Reports (Phase 8, FR17). No design screenshot: follows the Phase 7 pages.
+   Uses .card, .panel, .toolbar, .filters, .table, .stat-grid from pages.css. */
+
+.reports-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+/* ---------- Report picker ---------- */
+.reports-picker {
+  padding: 18px 14px;
+}
+
+.reports-picker .panel__title {
+  padding: 0 6px 10px;
+}
+
+.reports-picker ul {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.reports-picker__item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reports-picker__item:hover {
+  background: var(--color-row-hover);
+}
+
+.reports-picker__item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.reports-picker__item.is-active {
+  border-color: var(--color-border);
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-faint);
+}
+
+.reports-picker__title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.reports-picker__desc {
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Report ---------- */
+.reports-main {
+  min-width: 0;
+}
+
+.reports-desc {
+  margin: 4px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.reports-export {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.reports-export__error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.reports-filters {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.reports-filters > .btn {
+  justify-self: start;
+}
+
+.reports-meta {
+  margin: 0 0 14px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.reports-preview.is-loading {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.reports-summary {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 8px;
+}
+
+.reports-section {
+  margin-top: 20px;
+}
+
+.reports-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.reports-section__title .toolbar__meta {
+  font-size: var(--font-size-xs);
+}
+
+.reports-table th.num,
+.reports-table td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.reports-notes {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.reports-notes h3 {
+  margin: 0 0 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.reports-notes ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .reports-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .reports-export {
+    justify-content: flex-start;
+  }
+}
